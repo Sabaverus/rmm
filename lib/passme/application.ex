@@ -17,7 +17,7 @@ defmodule Passme.Application do
       Passme.User.Registry,
       Passme.User.Supervisor,
       ExGram,
-      {Passme.Bot, [method: :polling, token: "796318981:AAGkUX7zUDvfNXRY1rOQfNd45OODwNPgiuE"]}
+      {Passme.Bot, [method: :polling, token: get_exgram_token()]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -31,5 +31,14 @@ defmodule Passme.Application do
   def config_change(changed, _new, removed) do
     PassmeWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  def get_exgram_token() do
+      config = Application.get_env(:ex_gram, :token)
+      if(config !== nil) do
+        config
+      else
+        nil
+      end
   end
 end

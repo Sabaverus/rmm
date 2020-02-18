@@ -2,8 +2,6 @@ defmodule Passme.User.Storage do
 
   defstruct auto_id: 0, entries: %{}
 
-  alias Passme.User.Storage.Record, as: Record
-
   def new(records \\ []) do
     Enum.reduce(
       records,
