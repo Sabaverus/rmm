@@ -25,8 +25,6 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-config :ex_gram, token: "796318981:AAGkUX7zUDvfNXRY1rOQfNd45OODwNPgiuE"
-
 # config :tesla, adapter: Tesla.Adapter.Gun
 
 # Import environment specific config. This must remain at the bottom

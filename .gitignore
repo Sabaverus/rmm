@@ -3,6 +3,7 @@
 
 /.elixir_ls/
 /.history/
+/config/dev.exs
 
 # If you run "mix test --cover", coverage assets end up here.
 /cover/
