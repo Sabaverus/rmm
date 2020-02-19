@@ -1,5 +1,4 @@
 defmodule Passme.Chat.Supervisor do
-
   def start_link() do
     DynamicSupervisor.start_link(
       name: __MODULE__,
@@ -26,7 +25,9 @@ defmodule Passme.Chat.Supervisor do
     case start_child(chat_id) do
       {:ok, pid} ->
         pid
-      {:error, {:already_started ,pid}} -> pid
+
+      {:error, {:already_started, pid}} ->
+        pid
     end
   end
 end

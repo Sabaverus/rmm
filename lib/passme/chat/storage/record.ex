@@ -6,11 +6,11 @@ defmodule Passme.Chat.Storage.Record do
   import Ecto.Changeset
 
   schema "chat_records" do
-    field :key,         :string
-    field :desc,        :string
-    field :value,       :string
-    field :author,      :integer
-    field :chat_id,     :integer
+    field :key, :string
+    field :desc, :string
+    field :value, :string
+    field :author, :integer
+    field :chat_id, :integer
 
     timestamps()
   end

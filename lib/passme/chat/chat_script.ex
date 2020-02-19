@@ -4,18 +4,21 @@ defmodule Passme.Chat.ChatScript do
   @input_await_time :timer.seconds(30)
 
   @new_record_script [
-    {:key, %{
-      text: "Enter record key",
-      next: :value
-    }},
-    {:value, %{
-      text: "Enter record value",
-      next: :desc
-    }},
-    {:desc, %{
-      text: "Enter description of record",
-      next: :end
-    }}
+    {:key,
+     %{
+       text: "Enter record key",
+       next: :value
+     }},
+    {:value,
+     %{
+       text: "Enter record value",
+       next: :desc
+     }},
+    {:desc,
+     %{
+       text: "Enter description of record",
+       next: :end
+     }}
   ]
 
   def new(user, chat) do
@@ -37,6 +40,7 @@ defmodule Passme.Chat.ChatScript do
           |> Map.put(:timer, reset_input_timer(script.timer))
           |> Map.put(:record, Map.put(script.record, key, value))
         }
+
       {:error, msg} ->
         {:error, msg}
     end
@@ -49,11 +53,13 @@ defmodule Passme.Chat.ChatScript do
           :end,
           finish(script)
         }
+
       {:end, step} ->
         {
           :end,
           finish(script, step.text)
         }
+
       {key, data} ->
         ExGram.send_message(script.parent_user.id, data.text)
         |> case do
@@ -64,15 +70,18 @@ defmodule Passme.Chat.ChatScript do
               |> Map.put(:timer, reset_input_timer(script.timer))
               |> Map.put(:step, {key, Map.put(data, :processing, true)})
             }
+
           {:error, error} ->
             case process_ex_error(error) do
               :not_in_conversation ->
                 ExGram.send_message(script.parent_chat.id, "
                 @#{script.parent_user.username}
                 Для добавления записи добавьте бота в приватный чат @MoncyPasswordsBot")
+
               {_, _msg} ->
                 ExGram.send_message(script.parent_chat.id, "Неопознанный формат ответа")
             end
+
             {
               :ok,
               script
@@ -99,16 +108,16 @@ defmodule Passme.Chat.ChatScript do
     end)
   end
 
-  defp finish(%{
-    timer: timer,
-    parent_chat: pc,
-    parent_user: pu} = script,
-    text \\ "Success!"
-  ) do
+  defp finish(
+         %{timer: timer, parent_chat: pc, parent_user: pu} = script,
+         text \\ "Success!"
+       ) do
     ExGram.send_message(pu.id, text)
+
     if(pc !== pu) do
       ExGram.send_message(pc.id, "Record was added by user @#{pu.username}")
     end
+
     cancel_timer(timer)
     script
   end
@@ -128,16 +137,20 @@ defmodule Passme.Chat.ChatScript do
         case Jason.decode(error.message, keys: :atoms) do
           {:ok, %{error_code: 403}} ->
             :not_in_conversation
+
           {:ok, msg} ->
             IO.inspect(msg)
+
             {
               :undefined,
               msg
             }
+
           _ ->
             IO.puts("Undefined error on send message")
             IO.inspect(error)
         end
+
       _ ->
         IO.puts("Undefined error on send message")
         IO.inspect(error)

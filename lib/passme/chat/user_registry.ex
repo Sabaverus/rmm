@@ -1,5 +1,4 @@
 defmodule Passme.Chat.Registry do
-
   def start_link do
     Registry.start_link(keys: :unique, name: __MODULE__)
   end
@@ -16,4 +15,4 @@ defmodule Passme.Chat.Registry do
       start: {__MODULE__, :start_link, []}
     )
   end
- end
+end

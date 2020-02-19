@@ -34,11 +34,12 @@ defmodule Passme.Application do
   end
 
   def get_exgram_token() do
-      config = Application.get_env(:ex_gram, :token)
-      if(config !== nil) do
-        config
-      else
-        nil
-      end
+    config = Application.get_env(:ex_gram, :token)
+
+    if(config !== nil) do
+      config
+    else
+      nil
+    end
   end
 end

@@ -10,11 +10,21 @@ defmodule Passme do
   alias Passme.Repo, as: DB
   alias Passme.Chat.Storage.Record, as: Record
 
-  def get_chat_records(chat_id) do
+  def chat_records(chat_id) do
     Record
     |> Record.chat(chat_id)
     |> DB.all()
     |> Passme.Chat.Storage.new()
+  end
+
+  def chat_record(record_id, chat_id) do
+    Record
+    |> Record.chat(chat_id)
+    |> DB.get(record_id)
+  end
+
+  def record(record_id) do
+    DB.get(Record, record_id)
   end
 
   def get_chat_records_for_user(user_id, chat_id) do
