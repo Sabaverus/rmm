@@ -25,7 +25,6 @@ defmodule Passme.Chat.Supervisor do
   def get_chat_process(chat_id) do
     case start_child(chat_id) do
       {:ok, pid} ->
-        IO.puts("Process for chat ##{chat_id} is up")
         pid
       {:error, {:already_started ,pid}} -> pid
     end

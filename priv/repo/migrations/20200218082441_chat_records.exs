@@ -6,8 +6,8 @@ defmodule Passme.Repo.Migrations.ChatRecords do
       add :key,         :string
       add :desc,        :string
       add :value,       :string
-      add :author,      :integer
-      add :chat_id,     :integer
+      add :author,      :bigint
+      add :chat_id,     :bigint
 
       timestamps()
     end

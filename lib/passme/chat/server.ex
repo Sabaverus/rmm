@@ -39,8 +39,6 @@ defmodule Passme.Chat.Server do
 
   def is_wait_for_input(pid) do
     {_, _, script} = GenServer.call(pid, :get_state)
-    IO.puts("is_wait_for_input")
-    IO.inspect(script)
     script !== nil
   end
 
@@ -82,12 +80,12 @@ defmodule Passme.Chat.Server do
     }
   end
 
-  def handle_cast({:add_record, record, context}, state) do
+  def handle_cast({:add_record, record, _context}, state) do
     {chat_id, storage, script} = state
     new_storage =
       record
-      |> Map.put(:author, context.from.id)
-      |> Map.put(:chat_id, chat_id)
+      |> Map.put(:author, script.parent_user.id)
+      |> Map.put(:chat_id, script.parent_chat.id)
       |> Passme.create_chat_record()
       |> case do
         {:ok, entry} ->
@@ -111,7 +109,7 @@ defmodule Passme.Chat.Server do
     {chat_id, storage, _script} = state
     text = Enum.reduce(storage.entries, "List of entries:", fn
       {_id, v}, acc ->
-        acc <> "\nKey: #{v.key}\nDescription: #{v.desc}\nValue: #{v.value}\n"
+        acc <> "\nKey: #{v.key}\nValue: #{v.value}\nDescription: #{v.desc}\n"
     end)
     ExGram.send_message(chat_id, text)
     {:noreply, state, @expiry_idle_timeout}
@@ -158,8 +156,8 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_info(:timeout, state) do
-    {chat_id, _storage, _await} = state
-    ExGram.send_message(chat_id, "#{@expiry_idle_timeout / 1000} seconds timeout, server for user is down")
+    # {chat_id, _storage, _await} = state
+    # ExGram.send_message(chat_id, "#{@expiry_idle_timeout / 1000} seconds timeout, chat process is down")
     {:stop, :normal, state}
   end
 
@@ -173,7 +171,7 @@ defmodule Passme.Chat.Server do
 
   def start_script(user, chat) do
     {:ok, script} =
-      Passme.Chat.ChatScript.new(user.id, chat.id)
+      Passme.Chat.ChatScript.new(user, chat)
       |> Passme.Chat.ChatScript.start_step()
     script
   end
