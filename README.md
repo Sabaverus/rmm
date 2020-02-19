@@ -1,4 +1,4 @@
-# Passme
+# Remind my mind
 
 To start your Phoenix server:
 

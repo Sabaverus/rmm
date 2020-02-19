@@ -14,8 +14,8 @@ defmodule Passme.Application do
       PassmeWeb.Endpoint,
       # Starts a worker by calling: Passme.Worker.start_link(arg)
       # {Passme.Worker, arg},
-      Passme.User.Registry,
-      Passme.User.Supervisor,
+      Passme.Chat.Registry,
+      Passme.Chat.Supervisor,
       ExGram,
       {Passme.Bot, [method: :polling, token: get_exgram_token()]}
     ]

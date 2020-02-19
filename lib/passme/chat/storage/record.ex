@@ -1,4 +1,4 @@
-defmodule Passme.User.Storage.Record do
+defmodule Passme.Chat.Storage.Record do
   # defstruct key: nil, value: nil, desc: nil
 
   use Ecto.Schema
@@ -36,7 +36,7 @@ defmodule Passme.User.Storage.Record do
     where(query, [record], record.chat_id == ^chat_id)
   end
 
-  def map(%Passme.User.Storage.Record{} = record) do
+  def map(%Passme.Chat.Storage.Record{} = record) do
     Map.from_struct(record)
   end
 end

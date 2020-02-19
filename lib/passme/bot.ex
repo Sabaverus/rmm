@@ -9,18 +9,20 @@ defmodule Passme.Bot do
 
   ########### Server ###########
 
-  def handle({:callback_query, %{data: "list"} = cbq}, _context) do
-    Passme.User.Server.print_list(get_chat_process(cbq.from.id))
+  def handle({:callback_query, %{data: "list"} = data}, _context) do
+    Passme.Chat.Server.print_list(get_chat_process(data.message.chat.id))
   end
 
-  def handle({:callback_query, %{data: "new_record"} = cbq}, _context) do
-    chat_id = cbq.message.chat.id
-    Passme.User.Server.script_new_record(get_chat_process(chat_id), cbq)
+  def handle({:callback_query, %{data: "new_record"} = data}, _context) do
+
+    # Start script at user message from
+    get_chat_process(data.from.id)
+    |> Passme.Chat.Server.script_new_record(data)
   end
 
   def handle({:text, text, data}, _context) do
-    pid = get_chat_process(data[:from][:id])
-    is_wait = Passme.User.Server.is_wait_for_input(pid)
+    pid = get_chat_process(data.chat.id)
+    is_wait = Passme.Chat.Server.is_wait_for_input(pid)
     if is_wait do
       GenServer.cast(pid, {:input, text, data})
     end
@@ -32,7 +34,7 @@ defmodule Passme.Bot do
       inline_keyboard: [
         [
           %ExGram.Model.InlineKeyboardButton{
-            text: "Вывести полный список",
+            text: "Список записей",
             callback_data: "list"
           }
         ],
@@ -45,7 +47,9 @@ defmodule Passme.Bot do
       ]
     }
 
-    answer(context, "Список комманд",
+    answer(context, "
+    Этот бот умеет хранить записи добавленные пользователями, при этом обращаясь к записи - бот опрашивает создателя записи можно ли ее показать запросившему пользователю.
+    \nСписок доступных комманд",
       [
         parse_mode: "Markdown",
         reply_markup: markup
@@ -54,14 +58,15 @@ defmodule Passme.Bot do
   end
 
   def handle({:command, cmd, data}, _context) do
-    GenServer.call(get_chat_process(data[:from][:id]), {
+    get_chat_process(data.chat.id)
+    |> GenServer.call({
       :command,
       cmd,
       data
     })
   end
 
-  defp get_chat_process(user_id) do
-    Passme.User.Supervisor.get_chat_process(user_id)
+  defp get_chat_process(chat_id) do
+    Passme.Chat.Supervisor.get_chat_process(chat_id)
   end
 end

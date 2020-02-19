@@ -1,4 +1,4 @@
-defmodule Passme.User.Supervisor do
+defmodule Passme.Chat.Supervisor do
 
   def start_link() do
     DynamicSupervisor.start_link(
@@ -10,7 +10,7 @@ defmodule Passme.User.Supervisor do
   def start_child(chat_id) do
     DynamicSupervisor.start_child(
       __MODULE__,
-      {Passme.User.Server, chat_id}
+      {Passme.Chat.Server, chat_id}
     )
   end
 
@@ -25,7 +25,7 @@ defmodule Passme.User.Supervisor do
   def get_chat_process(chat_id) do
     case start_child(chat_id) do
       {:ok, pid} ->
-        IO.puts("Process for user##{chat_id} is up")
+        IO.puts("Process for chat ##{chat_id} is up")
         pid
       {:error, {:already_started ,pid}} -> pid
     end
