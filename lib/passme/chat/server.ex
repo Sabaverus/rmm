@@ -1,4 +1,7 @@
 defmodule Passme.Chat.Server do
+  @moduledoc """
+  Module represents process for telegram chat
+  """
   use GenServer, restart: :temporary
 
   alias Passme.Chat.Storage.Record, as: Record
@@ -63,7 +66,7 @@ defmodule Passme.Chat.Server do
   # Server
 
   def handle_call({:command, _cmd, data}, _from, state) do
-    # ExGram.send_message(data[:chat][:id], "Rtv #{cmd} from #{uid}")
+
     ExGram.send_message(data[:chat][:id], "Test MarkdownV2 /rec\\_2 [Record](/rec_2)",
       parse_mode: "MarkdownV2"
     )
@@ -71,9 +74,6 @@ defmodule Passme.Chat.Server do
     ExGram.send_message(data[:chat][:id], "Test HTML /rec_2 <a href=\"/rec_2\">Record</a>",
       parse_mode: "HTML"
     )
-
-    IO.inspect(state)
-    IO.inspect(data)
 
     {:reply, [], state, @expiry_idle_timeout}
   end
@@ -144,7 +144,7 @@ defmodule Passme.Chat.Server do
     {chat_id, storage, script} = state
 
     new_script =
-      if(script !== nil) do
+      if script !== nil do
         ExGram.send_message(chat_id, "Error: currently working another script")
         script
       else

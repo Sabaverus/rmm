@@ -1,4 +1,5 @@
 defmodule Passme.Chat.Interface do
+  @moduledoc false
   def record(record) do
     text = "
 Detailed record:

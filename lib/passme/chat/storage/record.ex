@@ -1,5 +1,5 @@
 defmodule Passme.Chat.Storage.Record do
-  # defstruct key: nil, value: nil, desc: nil
+  @moduledoc false
 
   use Ecto.Schema
   import Ecto.Query, warn: false

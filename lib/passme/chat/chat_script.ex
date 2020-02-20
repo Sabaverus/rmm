@@ -1,4 +1,5 @@
 defmodule Passme.Chat.ChatScript do
+  @moduledoc false
   defstruct step: nil, timer: nil, parent_chat: nil, parent_user: nil, record: nil
 
   @input_await_time :timer.seconds(30)
@@ -114,7 +115,7 @@ defmodule Passme.Chat.ChatScript do
        ) do
     ExGram.send_message(pu.id, text)
 
-    if(pc !== pu) do
+    if pc !== pu do
       ExGram.send_message(pc.id, "Record was added by user @#{pu.username}")
     end
 

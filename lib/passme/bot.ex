@@ -1,4 +1,5 @@
 defmodule Passme.Bot do
+  @moduledoc false
   @bot :passme
 
   use ExGram.Bot,

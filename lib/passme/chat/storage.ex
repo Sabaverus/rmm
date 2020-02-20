@@ -1,4 +1,5 @@
 defmodule Passme.Chat.Storage do
+  @moduledoc false
   defstruct auto_id: 0, entries: %{}
 
   def new(records \\ []) do

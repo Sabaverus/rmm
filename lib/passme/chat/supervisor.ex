@@ -1,4 +1,5 @@
 defmodule Passme.Chat.Supervisor do
+  @moduledoc false
   def start_link() do
     DynamicSupervisor.start_link(
       name: __MODULE__,
