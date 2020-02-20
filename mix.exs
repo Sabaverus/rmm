@@ -45,7 +45,8 @@ defmodule Passme.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:tesla, "~> 1.2"},
       {:hackney, "~> 1.12"},
-      {:ex_gram, "~> 0.9"}
+      {:ex_gram, "~> 0.9"},
+      {:credo, "~> 1.2", only: [:dev, :test], runtime: false}
     ]
   end
 

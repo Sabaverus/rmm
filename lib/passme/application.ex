@@ -6,7 +6,9 @@ defmodule Passme.Application do
   use Application
 
   def start(_type, _args) do
-    # List all child processes to be supervised
+
+    token = ExGram.Config.get(:ex_gram, :token)
+
     children = [
       # Start the Ecto repository
       Passme.Repo,
@@ -17,7 +19,7 @@ defmodule Passme.Application do
       Passme.Chat.Registry,
       Passme.Chat.Supervisor,
       ExGram,
-      {Passme.Bot, [method: :polling, token: get_exgram_token()]}
+      {Passme.Bot, [method: :polling, token: token]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -31,15 +33,5 @@ defmodule Passme.Application do
   def config_change(changed, _new, removed) do
     PassmeWeb.Endpoint.config_change(changed, removed)
     :ok
-  end
-
-  def get_exgram_token() do
-    config = Application.get_env(:ex_gram, :token)
-
-    if(config !== nil) do
-      config
-    else
-      nil
-    end
   end
 end
