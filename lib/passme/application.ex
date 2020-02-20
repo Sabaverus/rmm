@@ -6,7 +6,6 @@ defmodule Passme.Application do
   use Application
 
   def start(_type, _args) do
-
     token = ExGram.Config.get(:ex_gram, :token)
 
     children = [

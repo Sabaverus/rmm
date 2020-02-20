@@ -2,6 +2,8 @@ defmodule Passme.Bot do
   @moduledoc false
   @bot :passme
 
+  import Logger
+
   use ExGram.Bot,
     name: @bot
 
@@ -11,10 +13,8 @@ defmodule Passme.Bot do
 
   ########### Server ###########
 
-  def handle({:regex, key, msg}, _ctx) do
-    IO.inspect("Handle message")
-    IO.inspect(key)
-    IO.inspect(msg)
+  def handle({:regex, _key, _msg}, _ctx) do
+    debug("Handle message")
   end
 
   def handle({:callback_query, %{data: "list"} = data}, _context) do
@@ -31,15 +31,33 @@ defmodule Passme.Bot do
   def handle(
         {
           :callback_query,
-          %{data: "record_edit_" <> record} = data
+          %{data: "record_action_" <> action} = data
         },
-        _ctx
+        _context
       ) do
     {type, record_id} =
-      case record do
+      case action do
+        "delete_" <> record_id -> {:delete, record_id}
+        _ -> {:error, "Undefined action"}
+      end
+
+    get_chat_process(data.from.id)
+    |> Passme.Chat.Server.script_record_action(data, type, record_id)
+  end
+
+  def handle(
+        {
+          :callback_query,
+          %{data: "record_edit_" <> command} = data
+        },
+        _context
+      ) do
+    {type, record_id} =
+      case command do
         "name_" <> record_id -> {:name, record_id}
         "key_" <> record_id -> {:key, record_id}
         "value_" <> record_id -> {:value, record_id}
+        _ -> {:error, "Undefined edit command"}
       end
 
     get_chat_process(data.from.id)

@@ -37,7 +37,7 @@ Edit record:
             [
               %ExGram.Model.InlineKeyboardButton{
                 text: "Delete",
-                callback_data: "record_delete_#{record.id}"
+                callback_data: "record_action_delete_#{record.id}"
               }
             ]
           ]
@@ -80,6 +80,36 @@ Edit record:
               %ExGram.Model.InlineKeyboardButton{
                 text: "Добавить новую запись",
                 callback_data: "new_record"
+              }
+            ]
+          ]
+        }
+      ]
+    }
+  end
+
+  def not_in_conversation(%{username: username}) do
+    {
+      "@#{username}\n
+      Для добавления записи добавьте бота в приватный чат @MoncyPasswordsBot
+      ",
+      []
+    }
+  end
+
+  def script_step(%Passme.Chat.ChatScript{} = script) do
+    {_key, step} = script.step
+
+    {
+      step.text,
+      [
+        parse_mode: "Markdown",
+        reply_markup: %ExGram.Model.InlineKeyboardMarkup{
+          inline_keyboard: [
+            [
+              %ExGram.Model.InlineKeyboardButton{
+                text: "Cancel script",
+                callback_data: "script_abort"
               }
             ]
           ]
