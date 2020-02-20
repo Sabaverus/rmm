@@ -5,6 +5,7 @@ defmodule Passme.Bot do
     name: @bot
 
   middleware(ExGram.Middleware.IgnoreUsername)
+
   def bot(), do: @bot
 
   ########### Server ###########
@@ -54,9 +55,8 @@ defmodule Passme.Bot do
   end
 
   def handle({:command, "start", _data}, context) do
-    answer(context, "
-      Бот умеет хранить записи добавленные пользователями, при этом обращаясь к записи - бот опрашивает создателя записи можно ли ее показать запросившему пользователю.
-      \nСписок доступных комманд:", Passme.Chat.Interface.start())
+    {text, opts} = Passme.Chat.Interface.start()
+    answer(context, text, opts)
   end
 
   def handle({:command, "rec_" <> record_id, data}, _ctx) do

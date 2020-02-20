@@ -2,7 +2,7 @@ defmodule Passme.Chat.Interface do
   def record(record) do
     text = "
 Detailed record:
-------------------------
+=================================
 
 Name: #{record.desc}
 Key: #{record.key}
@@ -59,24 +59,31 @@ Edit record:
   end
 
   def start() do
-    [
-      parse_mode: "Markdown",
-      reply_markup: %ExGram.Model.InlineKeyboardMarkup{
-        inline_keyboard: [
-          [
-            %ExGram.Model.InlineKeyboardButton{
-              text: "Список записей",
-              callback_data: "list"
-            }
-          ],
-          [
-            %ExGram.Model.InlineKeyboardButton{
-              text: "Добавить новую запись",
-              callback_data: "new_record"
-            }
+    {
+      "
+Бот умеет хранить записи добавленные пользователями, при этом обращаясь к записи - бот
+опрашивает создателя записи можно ли ее показать запросившему пользователю.
+
+Список доступных комманд:",
+      [
+        parse_mode: "Markdown",
+        reply_markup: %ExGram.Model.InlineKeyboardMarkup{
+          inline_keyboard: [
+            [
+              %ExGram.Model.InlineKeyboardButton{
+                text: "Список записей",
+                callback_data: "list"
+              }
+            ],
+            [
+              %ExGram.Model.InlineKeyboardButton{
+                text: "Добавить новую запись",
+                callback_data: "new_record"
+              }
+            ]
           ]
-        ]
-      }
-    ]
+        }
+      ]
+    }
   end
 end
