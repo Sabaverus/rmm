@@ -88,20 +88,21 @@ Edit record:
     }
   end
 
+  @spec not_in_conversation(map()) :: {String.t(), Keyword.t()}
   def not_in_conversation(%{username: username}) do
     {
       "@#{username}\n
-      Для добавления записи добавьте бота в приватный чат @MoncyPasswordsBot
+Для добавления записи добавьте бота в приватный чат @MoncyPasswordsBot
       ",
       []
     }
   end
 
-  def script_step(%Passme.Chat.ChatScript{} = script) do
-    {_key, step} = script.step
+  def script_step(%{step: step} = _script) do
+    {_key, data} = step
 
     {
-      step.text,
+      data.text,
       [
         parse_mode: "Markdown",
         reply_markup: %ExGram.Model.InlineKeyboardMarkup{

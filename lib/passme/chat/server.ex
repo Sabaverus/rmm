@@ -5,6 +5,7 @@ defmodule Passme.Chat.Server do
   use GenServer, restart: :temporary
 
   alias Passme.Chat.Storage.Record, as: Record
+  alias Passme.Chat.Script, as: Script
 
   @expiry_idle_timeout :timer.seconds(30)
 
@@ -93,7 +94,7 @@ defmodule Passme.Chat.Server do
       {
         chat_id,
         storage,
-        start_script(context.from, context.message.chat)
+        start_script(Passme.Chat.Script.NewRecord, context.from, context.message.chat)
       },
       @expiry_idle_timeout
     }
@@ -179,26 +180,25 @@ defmodule Passme.Chat.Server do
         {chat_id, storage, script}
       )
       when not is_nil(script) do
-    new_script =
-      case Passme.Chat.ChatScript.set_step_result(script, text) do
-        {:ok, script} ->
-          {status, script} =
-            script
-            |> Passme.Chat.ChatScript.next_step()
-            |> Passme.Chat.ChatScript.start_step()
-
-          if status == :end do
-            add_record_to_chat(self(), script, context)
-            # Flush script if ended
-            nil
-          else
-            script
-          end
-
-        {:error, message} ->
-          ExGram.send_message(chat_id, message)
+    new_script = case Script.set_step_result(script, text) do
+      {:ok, script} ->
+        {status, script} =
           script
-      end
+          |> Script.next_step()
+          |> Script.start_step()
+
+        if status == :end do
+          add_record_to_chat(self(), script, context)
+          # Flush script if ended
+          nil
+        else
+          script
+        end
+
+      {:error, message} ->
+        ExGram.send_message(chat_id, message)
+        script
+    end
 
     {
       :noreply,
@@ -223,11 +223,9 @@ defmodule Passme.Chat.Server do
 
   #######
 
-  def start_script(user, chat) do
-    {:ok, script} =
-      Passme.Chat.ChatScript.new(user, chat)
-      |> Passme.Chat.ChatScript.start_step()
-
+  def start_script(module, user, chat) do
+    script = apply(module, :new, [user, chat])
+    {:ok, script} = Script.start_step(script)
     script
   end
 end

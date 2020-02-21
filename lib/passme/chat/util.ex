@@ -3,6 +3,7 @@ defmodule Passme.Chat.Util do
 
   import Logger
 
+  @spec reply(%{id: integer}, map(), {String.t(), Keyword.t()}) :: :ok | :error
   def reply(target, from, {text, opts}) do
     ExGram.send_message(target.id, text, opts)
     |> process_result(target, from)
@@ -13,15 +14,13 @@ defmodule Passme.Chat.Util do
     |> process_result(target, from)
   end
 
+  @spec process_result({:ok | :error, ExGram.Model.Message.t() | ExGram.Error.t()}, map(), map()) :: :ok | :error
   defp process_result({:ok, _}, _, _) do
     :ok
   end
 
-  @spec process_result({:error, map()}, map(), map()) :: :error
-  defp process_result({:error, %{} = result}, target, from) do
-    if Map.has_key?(result, :code) do
-      process_ex_error(result, target, from)
-    end
+  defp process_result({:error, result}, target, from) do
+    process_ex_error(result, target, from)
 
     :error
   end
@@ -39,12 +38,16 @@ defmodule Passme.Chat.Util do
 
   @spec process_tg_error(map(), map(), map()) ::
           {:not_in_conversation, map()} | {:undefined, map()}
-  def process_tg_error(target, from, msg) do
+  defp process_tg_error(target, from, msg) do
     case msg do
       %{error_code: 403} ->
         # Preserve possible cyclic calls
         if target.id !== from.id do
-          reply(target, from, Passme.Chat.Interface.not_in_conversation(target))
+          reply(
+            target,
+            from,
+            Passme.Chat.Interface.not_in_conversation(target)
+          )
         end
 
         {:not_in_conversation, msg}
