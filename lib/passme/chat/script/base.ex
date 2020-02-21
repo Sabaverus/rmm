@@ -2,7 +2,6 @@ defmodule Passme.Chat.Script.Base do
   @moduledoc false
 
   defmacro __using__(ops) do
-    import Passme.Chat.Script.Handler
     import Passme.Chat.Util
 
     alias Passme.Chat.Interface, as: ChatInterface
@@ -16,6 +15,8 @@ defmodule Passme.Chat.Script.Base do
       end
 
     quote do
+      @behaviour Passme.Chat.Script.Handler
+
       defstruct module: __MODULE__,
                 step: nil,
                 timer: nil,
@@ -54,7 +55,7 @@ defmodule Passme.Chat.Script.Base do
             {:end, finish(script)}
 
           {:end, step} ->
-            {:end, finish(script, step.text)}
+            {:end, finish(script)}
 
           {key, data} ->
             case reply(script.parent_user, script.parent_chat, ChatInterface.script_step(script)) do
@@ -91,16 +92,7 @@ defmodule Passme.Chat.Script.Base do
         end)
       end
 
-      defp finish(
-             %{timer: timer, parent_chat: pc, parent_user: pu} = script,
-             text \\ "Success!"
-           ) do
-        ExGram.send_message(pu.id, text)
-
-        if pc.id !== pu.id do
-          ExGram.send_message(pc.id, "Record was added by user @#{pu.username}")
-        end
-
+      defp finish(%{timer: timer} = script) do
         cancel_timer(timer)
         script
       end

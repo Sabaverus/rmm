@@ -115,35 +115,6 @@ defmodule Passme.Chat.Server do
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:add_record, script, _context}, state) do
-    # Here script must be nil
-    {chat_id, storage, _script} = state
-
-    new_storage =
-      script.record
-      |> Map.put(:author, script.parent_user.id)
-      |> Map.put(:chat_id, script.parent_chat.id)
-      |> Passme.create_chat_record()
-      |> case do
-        {:ok, entry} ->
-          Passme.Chat.Storage.put_record(storage, entry)
-
-        {:error, _changeset} ->
-          ExGram.send_message(chat_id, "Error adding new record")
-          storage
-      end
-
-    {
-      :noreply,
-      {
-        chat_id,
-        new_storage,
-        script
-      },
-      @expiry_idle_timeout
-    }
-  end
-
   def handle_cast({:record_edit, key, record_id, _data}, state) do
     {chat_id, storage, script} = state
 
@@ -176,11 +147,12 @@ defmodule Passme.Chat.Server do
 
   # Enter if awaiter (script) is not null
   def handle_cast(
-        {:input, text, context},
-        {chat_id, storage, script}
+        {:input, text, _context},
+        {chat_id, storage, script} = state
       )
       when not is_nil(script) do
-    new_script = case Script.set_step_result(script, text) do
+    new_state = case Script.set_step_result(script, text) do
+
       {:ok, script} ->
         {status, script} =
           script
@@ -188,25 +160,20 @@ defmodule Passme.Chat.Server do
           |> Script.start_step()
 
         if status == :end do
-          add_record_to_chat(self(), script, context)
-          # Flush script if ended
-          nil
+          {^chat_id, storage, script} = Script.end_script({chat_id, storage, script})
+          {chat_id, storage, script}
         else
-          script
+          {chat_id, storage, script}
         end
 
       {:error, message} ->
         ExGram.send_message(chat_id, message)
-        script
+        state
     end
 
     {
       :noreply,
-      {
-        chat_id,
-        storage,
-        new_script
-      },
+      new_state,
       @expiry_idle_timeout
     }
   end

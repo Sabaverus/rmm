@@ -13,4 +13,7 @@ defmodule Passme.Chat.ChatScript.EditRecord do
          text: "Field updated!"
        }}
     ]
+  def end_script({chat_id, storage, _script}) do
+    {chat_id, storage, nil}
+  end
 end
