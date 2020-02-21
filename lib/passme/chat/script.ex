@@ -9,6 +9,8 @@ defmodule Passme.Chat.Script do
 
   def set_step_result(script, value), do: forward(script, :set_step_result, [script, value])
 
+  def abort_wr(script), do: forward(script, :abort_wr, [script])
+
   def end_script({_, _, script} = state), do: forward(script, :end_script, [state])
 
   defp forward(script, fun, args) do

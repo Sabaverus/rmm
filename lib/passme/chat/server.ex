@@ -68,7 +68,21 @@ defmodule Passme.Chat.Server do
     GenServer.cast(pid, {:record_edit, type, record_id, context})
   end
 
+  def script_abort(pid) do
+    GenServer.call(pid, :script_abort)
+  end
+
   # Server
+
+  def handle_call(:script_abort, _from, {chat_id, storage, script}) do
+
+    Script.abort_wr(script)
+    {:reply, :ok, {
+      chat_id,
+      storage,
+      nil
+    }}
+  end
 
   def handle_call({:command, _cmd, data}, _from, state) do
     ExGram.send_message(data[:chat][:id], "Test MarkdownV2 /rec\\_2 [Record](/rec_2)",

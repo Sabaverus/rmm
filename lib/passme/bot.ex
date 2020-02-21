@@ -64,6 +64,18 @@ defmodule Passme.Bot do
     |> Passme.Chat.Server.script_record_edit(data, type, record_id)
   end
 
+  def handle(
+        {
+          :callback_query,
+          %{data: "script_abort"} = data
+        },
+        _context
+      ) do
+
+    get_chat_process(data.from.id)
+    |> Passme.Chat.Server.script_abort()
+  end
+
   def handle({:text, text, data}, _context) do
     pid = get_chat_process(data.chat.id)
     is_wait = Passme.Chat.Server.is_wait_for_input(pid)

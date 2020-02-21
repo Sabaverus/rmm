@@ -77,6 +77,11 @@ defmodule Passme.Chat.Script.Base do
         Map.put(script, :step, get_next_step(step))
       end
 
+      def abort_wr(%{timer: timer} = script) do
+        cancel_timer(timer)
+        abort(script)
+      end
+
       defp validate_value(step, value) do
         if Map.has_key?(step, :validate) do
           apply(step.validate, [value])

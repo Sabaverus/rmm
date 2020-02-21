@@ -22,6 +22,14 @@ defmodule Passme.Chat.Script.NewRecord do
        }}
     ]
 
+  def abort(script) do
+    %{
+      parent_user: pu,
+      parent_chat: pc
+    } = script
+    reply(pu, pc, "Adding new record has been cancelled")
+  end
+
   def end_script({chat_id, storage, script}) do
 
     %{
