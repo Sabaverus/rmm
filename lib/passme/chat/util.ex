@@ -3,7 +3,11 @@ defmodule Passme.Chat.Util do
 
   import Logger
 
-  @spec reply(%{id: binary | integer, username: binary}, map(), {String.t(), Keyword.t()} | String.t()) :: :ok | :error
+  @spec reply(
+          %{id: binary | integer, username: binary},
+          map(),
+          {String.t(), Keyword.t()} | String.t()
+        ) :: :ok | :error
   def reply(target, from, {text, opts}) do
     ExGram.send_message(target.id, text, opts)
     |> process_result(target, from)
@@ -14,7 +18,8 @@ defmodule Passme.Chat.Util do
     |> process_result(target, from)
   end
 
-  @spec process_result({:ok | :error, ExGram.Model.Message.t() | ExGram.Error.t()}, map(), map()) :: :ok | :error
+  @spec process_result({:ok | :error, ExGram.Model.Message.t() | ExGram.Error.t()}, map(), map()) ::
+          :ok | :error
   defp process_result({:ok, _}, _, _) do
     :ok
   end

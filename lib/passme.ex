@@ -43,4 +43,10 @@ defmodule Passme do
     |> Record.changeset(record)
     |> DB.insert()
   end
+
+  def update_record(%Record{} = record, attrs) do
+    record
+    |> Record.changeset(attrs)
+    |> DB.update()
+  end
 end

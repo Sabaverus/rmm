@@ -18,21 +18,15 @@ defmodule Passme.Bot do
   end
 
   def handle({:callback_query, %{data: "list"} = data}, _context) do
-    get_chat_process(data.message.chat.id)
-    |> Passme.Chat.Server.print_list()
+    Passme.Chat.Server.print_list(data.message.chat.id)
   end
 
   def handle({:callback_query, %{data: "new_record"} = data}, _context) do
-    # Start script at user message from
-    get_chat_process(data.from.id)
-    |> Passme.Chat.Server.script_new_record(data)
+    Passme.Chat.Server.script_new_record(data.from.id, data)
   end
 
   def handle(
-        {
-          :callback_query,
-          %{data: "record_action_" <> action} = data
-        },
+        {:callback_query, %{data: "record_action_" <> action} = data},
         _context
       ) do
     {type, record_id} =
@@ -41,48 +35,53 @@ defmodule Passme.Bot do
         _ -> {:error, "Undefined action"}
       end
 
-    get_chat_process(data.from.id)
-    |> Passme.Chat.Server.script_record_action(data, type, record_id)
+    Passme.Chat.Server.script_record_action(data.from.id, data, type, record_id)
   end
 
   def handle(
-        {
-          :callback_query,
-          %{data: "record_edit_" <> command} = data
-        },
-        _context
+        {:callback_query, %{data: "record_edit_" <> command} = data},
+        context
       ) do
-    {type, record_id} =
+    {field, record_id} =
       case command do
-        "name_" <> record_id -> {:name, record_id}
-        "key_" <> record_id -> {:key, record_id}
-        "value_" <> record_id -> {:value, record_id}
-        _ -> {:error, "Undefined edit command"}
+        "name_" <> record_id ->
+          {:name, record_id}
+
+        "key_" <> record_id ->
+          {:key, record_id}
+
+        "value_" <> record_id ->
+          {:value, record_id}
+
+        _ ->
+          answer(context, "Undefined edit command")
+          {nil, command}
       end
 
-    get_chat_process(data.from.id)
-    |> Passme.Chat.Server.script_record_edit(data, type, record_id)
+    id = String.to_integer(record_id)
+
+    if is_atom(field) do
+      if Passme.Chat.Storage.Record.has_field?(field) do
+        Passme.Chat.Server.script_record_edit(data.from.id, data, field, id)
+      else
+        answer(context, "Record field doesn't exists or not allowed to edit (#{field})")
+      end
+    end
   end
 
   def handle(
-        {
-          :callback_query,
-          %{data: "script_abort"} = data
-        },
+        {:callback_query, %{data: "script_abort"} = data},
         _context
       ) do
+    Passme.Chat.Server.script_abort(data.from.id)
+  end
 
-    get_chat_process(data.from.id)
-    |> Passme.Chat.Server.script_abort()
+  def handle({:callback_query, _data}, context) do
+    answer(context, "Undefined query")
   end
 
   def handle({:text, text, data}, _context) do
-    pid = get_chat_process(data.chat.id)
-    is_wait = Passme.Chat.Server.is_wait_for_input(pid)
-
-    if is_wait do
-      GenServer.cast(pid, {:input, text, data})
-    end
+    Passme.Chat.Server.input_handler(data.chat.id, text, data)
   end
 
   def handle({:command, "start", _data}, context) do
@@ -91,20 +90,10 @@ defmodule Passme.Bot do
   end
 
   def handle({:command, "rec_" <> record_id, data}, _ctx) do
-    get_chat_process(data.chat.id)
-    |> Passme.Chat.Server.show_record(String.to_integer(record_id), data)
+    Passme.Chat.Server.show_record(data.chat.id, String.to_integer(record_id), data)
   end
 
   def handle({:command, cmd, data}, _ctx) do
-    get_chat_process(data.chat.id)
-    |> GenServer.call({
-      :command,
-      cmd,
-      data
-    })
-  end
-
-  defp get_chat_process(chat_id) do
-    Passme.Chat.Supervisor.get_chat_process(chat_id)
+    Passme.Chat.Server.handle_command(data.chat.id, cmd, data)
   end
 end

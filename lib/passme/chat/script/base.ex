@@ -24,24 +24,24 @@ defmodule Passme.Chat.Script.Base do
                 parent_user: nil,
                 record: nil
 
-      def new(user, chat) do
+      def new(user, chat, record \\ %Passme.Chat.Storage.Record{}) do
         %__MODULE__{
           step: first_step(),
           timer: Process.send_after(self(), :await_input_timeout, unquote(wait_time)),
           parent_chat: chat,
           parent_user: user,
-          record: %Passme.Chat.Storage.Record{}
+          record: record
         }
       end
 
-      def set_step_result(%{step: {key, step}} = script, value) do
+      def set_step_result(%{step: {_, step}} = script, value) do
         case validate_value(step, value) do
           :ok ->
             {
               :ok,
               script
               |> Map.put(:timer, reset_input_timer(script.timer))
-              |> Map.put(:record, Map.put(script.record, key, value))
+              |> Map.put(:record, Map.put(script.record, get_field_key(script), escape(value)))
             }
 
           {:error, msg} ->
@@ -109,6 +109,19 @@ defmodule Passme.Chat.Script.Base do
       defp reset_input_timer(timer) do
         cancel_timer(timer)
         Process.send_after(self(), :await_input_timeout, unquote(wait_time))
+      end
+
+      defp get_field_key(%{step: {key, data}}) do
+        if Map.has_key?(data, :field) do
+          data.field
+        else
+          key
+        end
+      end
+
+      defp escape(value) do
+        value
+        |> String.replace(~r/(\*|\\|\_|\-)/, "\\\\" <> "\\1")
       end
     end
   end
