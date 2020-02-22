@@ -4,6 +4,8 @@ defmodule Passme.Chat.Server do
   """
   use GenServer, restart: :temporary
 
+  import Logger
+
   alias Passme.Chat.Storage.Record, as: Record
   alias Passme.Chat.Script, as: Script
 
@@ -104,6 +106,7 @@ defmodule Passme.Chat.Server do
   def handle_call(:script_abort, _from, {_, _, script} = state) when is_nil(script) do
     {:reply, :error, state}
   end
+
   def handle_call(:script_abort, _from, {chat_id, storage, script}) do
     Script.abort_wr(script)
     {:reply, :ok, {chat_id, storage, nil}}
@@ -126,20 +129,23 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_call({:get_record, record_id}, _from, state) do
-    record = Enum.find(nil, fn {_storage_id, entry} ->
-      entry.id == record_id
-    end)
+    record =
+      Enum.find(nil, fn {_storage_id, entry} ->
+        entry.id == record_id
+      end)
+
     {:reply, record, state}
   end
 
   def handle_cast({:update_record, fields}, state) do
     {chat_id, storage, script} = state
 
-    new_entries = storage.entries
-    |> Enum.find(nil, fn {_storage_id, entry} ->
+    new_entries =
+      storage.entries
+      |> Enum.find(nil, fn {_storage_id, entry} ->
         entry.id == fields.record_id
       end)
-    |> case do
+      |> case do
         {storage_id, storage_record} ->
           storage_record
           |> Passme.update_record(fields)
@@ -147,8 +153,9 @@ defmodule Passme.Chat.Server do
             {:ok, record} ->
               ExGram.send_message(chat_id, "RMM.Chat: Record updated")
               Map.put(storage.entries, storage_id, record)
+
             {:error, changeset} ->
-              IO.inspect(changeset)
+              debug(changeset)
               ExGram.send_message(chat_id, "RMM.Chat: Error on updating record")
               storage.entries
           end
@@ -189,21 +196,17 @@ defmodule Passme.Chat.Server do
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:record_edit, _, _, _}, {chat_id, _, script} = state) when not is_nil(script) do
+  def handle_cast({:record_edit, _, _, _}, {chat_id, _, script} = state)
+      when not is_nil(script) do
     ExGram.send_message(chat_id, "Error: currently working another script")
     {:noreply, {chat_id, state}}
   end
+
   def handle_cast({:record_edit, key, record_id, data}, state) do
     {chat_id, storage, _} = state
 
-    IO.puts("
-
-     >>>>>>>>>>>>>>>>>>>> AAAAAAA
-
-    ")
-
+    # Record in chat storage
     new_script =
-      # Record in chat storage
       if data.message.chat.id == data.from.id do
         storage.entries
       else
@@ -211,17 +214,13 @@ defmodule Passme.Chat.Server do
         chat_storage.entries
       end
       |> Enum.find(nil, fn {_storage_id, entry} ->
-          IO.inspect entry
-          IO.inspect record_id
-          entry.id == record_id
-        end)
-      |> IO.inspect
+        entry.id == record_id
+      end)
       # Check for record field availability
       |> case do
         {_, _} -> Passme.Chat.Storage.Record.has_field?(key)
         nil -> false
       end
-      |> IO.inspect
       # TODO Check user can edit this record
       |> if do
         # Start edit script, what waiting for input
@@ -229,6 +228,7 @@ defmodule Passme.Chat.Server do
           Map.put(%{}, key, nil)
           |> Map.put(:record_id, record_id)
           |> Map.put(:_field, key)
+
         start_script(Passme.Chat.Script.RecordFieldEdit, data.from, data.message.chat, struct)
       end
 

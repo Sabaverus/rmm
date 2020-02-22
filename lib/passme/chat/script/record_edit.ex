@@ -33,12 +33,10 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
   def end_script({chat_id, storage, script}) do
     %{parent_chat: pc} = script
 
-    IO.inspect(script.record)
     Passme.Chat.Server.update_chat_record(pc.id, script.record)
 
     {chat_id, storage, nil}
   end
-
 
   defp validate(value) do
     if is_bitstring(value) do
