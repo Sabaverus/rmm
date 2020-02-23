@@ -25,7 +25,8 @@ defmodule Passme.Chat.Util do
   end
 
   defp process_result({:error, result}, target, from) do
-    process_ex_error(result, target, from)
+    result
+    |> process_ex_error(target, from)
 
     :error
   end
@@ -43,14 +44,14 @@ defmodule Passme.Chat.Util do
 
   @spec process_tg_error(map(), map(), map()) ::
           {:not_in_conversation, map()} | {:undefined, map()}
-  defp process_tg_error(target, from, msg) do
+  defp process_tg_error(msg, target, from) do
     case msg do
       %{error_code: 403} ->
         # Preserve possible cyclic calls
         if target.id !== from.id do
           reply(
-            target,
             from,
+            target,
             Passme.Chat.Interface.not_in_conversation(target)
           )
         end
@@ -63,10 +64,10 @@ defmodule Passme.Chat.Util do
     end
   end
 
-  defp process_tg_message(target, from, message) do
+  defp process_tg_message(message, target, from) do
     case Jason.decode(message, keys: :atoms) do
       {:ok, %{error_code: _} = msg} ->
-        process_tg_error(target, from, msg)
+        process_tg_error(msg, target, from)
 
       {:ok, msg} ->
         debug("Undefined error")

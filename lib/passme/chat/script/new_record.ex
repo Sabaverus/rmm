@@ -49,7 +49,7 @@ defmodule Passme.Chat.Script.NewRecord do
           if pc.id !== pu.id do
             reply(pc, pc, "Record was added by user @#{pu.username}")
           end
-
+          # Record need put to chat state, not current!
           Passme.Chat.Storage.put_record(storage, entry)
 
         {:error, _changeset} ->

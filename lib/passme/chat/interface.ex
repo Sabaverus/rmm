@@ -52,10 +52,14 @@ Edit record:
       |> Enum.filter(fn
         {_id, v} -> is_nil(v.archived)
       end)
-      |> Enum.reduce("List of entries:", fn
+      |> Enum.reduce("", fn
         {_id, v}, acc ->
           acc <> "\nKey: #{v.key}\n`Click >>>` /rec\\_#{v.id}\n"
       end)
+      |> case do
+        "" -> "List is empty"
+        string -> "List of entries:" <> string
+      end
 
     {
       text,
@@ -76,13 +80,13 @@ Edit record:
           inline_keyboard: [
             [
               %ExGram.Model.InlineKeyboardButton{
-                text: "Список записей",
+                text: "🗄 Список записей",
                 callback_data: "list"
               }
             ],
             [
               %ExGram.Model.InlineKeyboardButton{
-                text: "Добавить новую запись",
+                text: "📝 Добавить новую запись",
                 callback_data: "new_record"
               }
             ]
