@@ -19,4 +19,17 @@ defmodule Passme.Chat.Storage do
       entries: entries
     }
   end
+
+  @spec get_record(%Passme.Chat.Storage{}, integer()) :: {integer(), %Passme.Chat.Storage.Record{}} | nil
+  def get_record(%Passme.Chat.Storage{entries: entries}, record_id) do
+    entries
+    |> Enum.find(nil, fn {_storage_id, entry} ->
+      entry.id == record_id
+    end)
+  end
+
+  def update(%Passme.Chat.Storage{entries: entries} = storage, entry_id, entry) do
+    new_entries = Map.put(entries, entry_id, entry)
+    Map.put(storage, :entries, new_entries)
+  end
 end

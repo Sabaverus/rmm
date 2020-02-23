@@ -49,4 +49,10 @@ defmodule Passme do
     |> Record.changeset(attrs)
     |> DB.update()
   end
+
+  def archive_record(%Record{} = record) do
+    record
+    |> Record.changeset(%{archived: true})
+    |> DB.update()
+  end
 end

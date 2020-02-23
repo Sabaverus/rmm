@@ -76,7 +76,7 @@ defmodule Passme.Chat.Server do
 
   def script_record_action(chat_id, context, type, record_id) do
     get_chat_process(chat_id)
-    |> GenServer.cast({:record_action, type, record_id, context})
+    |> GenServer.cast({:record_action, {type, record_id}, context})
   end
 
   def script_abort(chat_id) do
@@ -99,6 +99,11 @@ defmodule Passme.Chat.Server do
   def update_chat_record(chat_id, fields) do
     get_chat_process(chat_id)
     |> GenServer.cast({:update_record, fields})
+  end
+
+  def archive_record(chat_id, storage_id) do
+    get_chat_process(chat_id)
+    |> GenServer.cast({:archive_record, storage_id})
   end
 
   ########### Server ###########
@@ -141,10 +146,8 @@ defmodule Passme.Chat.Server do
     {chat_id, storage, script} = state
 
     new_entries =
-      storage.entries
-      |> Enum.find(nil, fn {_storage_id, entry} ->
-        entry.id == fields.record_id
-      end)
+      storage
+      |> Passme.Chat.Storage.get_record(fields.record_id)
       |> case do
         {storage_id, storage_record} ->
           storage_record
@@ -164,7 +167,32 @@ defmodule Passme.Chat.Server do
           ExGram.send_message(chat_id, "RMM.Chat: Record not found in this chat")
       end
 
-    {:noreply, {chat_id, Map.put(storage, :entries, new_entries), script}}
+    {:noreply, {chat_id, Map.put(storage, :entries, new_entries), script}, @expiry_idle_timeout}
+  end
+
+  def handle_cast({:archive_record, storage_id}, state) do
+
+    {chat_id, storage, script} = state
+
+    entry = Map.get(storage.entries, storage_id)
+
+    new_storage =
+      if entry do
+        case Passme.archive_record(entry) do
+          {:ok, entry} ->
+            ExGram.send_message(chat_id, "Record deleted")
+            Passme.Chat.Storage.update(storage, storage_id, entry)
+            # Passme.Chat.Storage.delete(storage, storage_id)
+          {:error, changeset} ->
+            ExGram.send_message(chat_id, "Error on deleting record")
+            debug(changeset)
+            storage
+        end
+      else
+        storage
+      end
+
+    {:noreply, {chat_id, new_storage, script}, @expiry_idle_timeout}
   end
 
   def handle_cast({:new_record, context}, state) do
@@ -199,7 +227,7 @@ defmodule Passme.Chat.Server do
   def handle_cast({:record_edit, _, _, _}, {chat_id, _, script} = state)
       when not is_nil(script) do
     ExGram.send_message(chat_id, "Error: currently working another script")
-    {:noreply, {chat_id, state}}
+    {:noreply, {chat_id, state}, @expiry_idle_timeout}
   end
 
   def handle_cast({:record_edit, key, record_id, data}, state) do
@@ -232,7 +260,41 @@ defmodule Passme.Chat.Server do
         start_script(Passme.Chat.Script.RecordFieldEdit, data.from, data.message.chat, struct)
       end
 
-    {:noreply, {chat_id, storage, new_script}}
+    {:noreply, {chat_id, storage, new_script}, @expiry_idle_timeout}
+  end
+
+  def handle_cast({:record_action, {:delete, record_id}, data}, state) do
+    {_, storage, _} = state
+    # Get storage from parent chat
+    if data.message.chat.id == data.from.id do
+      storage
+    else
+      {_, chat_storage, _} = Passme.Chat.Server.get_state(data.message.chat.id)
+      chat_storage
+    end
+    |> Passme.Chat.Storage.get_record(record_id)
+    |> case do
+      {storage_id, _entry} ->
+        Passme.Chat.Server.archive_record(data.message.chat.id, storage_id)
+        # case Passme.archive_record(entry) do
+        #   {:ok, _} ->
+        #     ExGram.send_message(chat_id, "Record deleted")
+        #     Passme.Chat.Storage.delete(storage, storage_id)
+        #   {:error, changeset} ->
+        #     ExGram.send_message(chat_id, "Error on deleting record")
+        #     debug(changeset)
+        #     storage
+        # end
+      nil ->
+        ExGram.send_message(data.message.chat.id, "Record not found for given chat")
+    end
+
+    {:noreply, state, @expiry_idle_timeout}
+  end
+
+  def handle_cast({:record_action, _, _}, {chat_id, _, _} = state) do
+    ExGram.send_message(chat_id, "Action is not defined")
+    {:noreply, state, @expiry_idle_timeout}
   end
 
   def handle_cast(:list, state) do

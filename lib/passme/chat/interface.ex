@@ -48,7 +48,11 @@ Edit record:
 
   def list(records) do
     text =
-      Enum.reduce(records, "List of entries:", fn
+      records
+      |> Enum.filter(fn
+        {_id, v} -> is_nil(v.archived)
+      end)
+      |> Enum.reduce("List of entries:", fn
         {_id, v}, acc ->
           acc <> "\nKey: #{v.key}\n`Click >>>` /rec\\_#{v.id}\n"
       end)

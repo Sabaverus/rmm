@@ -31,7 +31,7 @@ defmodule Passme.Bot do
       ) do
     {type, record_id} =
       case action do
-        "delete_" <> record_id -> {:delete, record_id}
+        "delete_" <> record_id -> {:delete, String.to_integer(record_id)}
         _ -> {:error, "Undefined action"}
       end
 
