@@ -54,7 +54,7 @@ Edit record:
       end)
       |> Enum.reduce("", fn
         {_id, v}, acc ->
-          acc <> "\nKey: #{v.key}\n`Click >>>` /rec\\_#{v.id}\n"
+          acc <> "\n📋 Key: #{v.key}\n`Full record =>` /rec\\_#{v.id}\n"
       end)
       |> case do
         "" -> "List is empty"
