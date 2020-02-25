@@ -41,13 +41,13 @@ defmodule Passme.Chat.Script.NewRecord do
       script.record
       |> Map.put(:author, script.parent_user.id)
       |> Map.put(:chat_id, script.parent_chat.id)
-      |> Passme.create_chat_record()
+      |> Passme.Chat.create_chat_record()
       |> case do
         {:ok, entry} ->
           reply(pu, pc, "Record was added")
 
           if pc.id !== pu.id do
-            reply(pc, pc, "Record was added by user @#{pu.username}")
+            reply(pc, pu, "Record was added by user @#{pu.username}")
           end
           # Record need put to chat state, not current!
           Passme.Chat.Storage.put_record(storage, entry)

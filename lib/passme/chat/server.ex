@@ -16,7 +16,7 @@ defmodule Passme.Chat.Server do
       :ok,
       {
         chat_id,
-        Passme.chat_records(chat_id) || Passme.Chat.Storage.new([]),
+        Passme.Chat.chat_records(chat_id) || Passme.Chat.Storage.new([]),
         nil
       },
       @expiry_idle_timeout
@@ -151,7 +151,7 @@ defmodule Passme.Chat.Server do
       |> case do
         {storage_id, storage_record} ->
           storage_record
-          |> Passme.update_record(fields)
+          |> Passme.Chat.update_record(fields)
           |> case do
             {:ok, record} ->
               ExGram.send_message(chat_id, "RMM.Chat: Record updated")
@@ -178,7 +178,7 @@ defmodule Passme.Chat.Server do
 
     new_storage =
       if entry do
-        case Passme.archive_record(entry) do
+        case Passme.Chat.archive_record(entry) do
           {:ok, entry} ->
             ExGram.send_message(chat_id, "Record deleted")
             Passme.Chat.Storage.update(storage, storage_id, entry)
@@ -212,7 +212,7 @@ defmodule Passme.Chat.Server do
   def handle_cast({:show_record, record_id, _data}, state) do
     {chat_id, _storage, _await} = state
 
-    case Passme.chat_record(record_id, chat_id) do
+    case Passme.Chat.chat_record(record_id, chat_id) do
       %Record{} = record ->
         {text, opts} = Passme.Chat.Interface.record(record)
         ExGram.send_message(chat_id, text, opts)
@@ -249,7 +249,9 @@ defmodule Passme.Chat.Server do
         {_, _} -> Passme.Chat.Storage.Record.has_field?(key)
         nil -> false
       end
+      #
       # TODO Check user can edit this record
+      #
       |> if do
         # Start edit script, what waiting for input
         struct =
