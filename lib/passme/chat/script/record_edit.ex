@@ -30,12 +30,9 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
     reply(pu, pc, "Record field edit has been cancelled")
   end
 
-  def end_script({chat_id, storage, script}) do
-    %{parent_chat: pc} = script
-
-    Passme.Chat.Server.update_chat_record(pc.id, script.record)
-
-    {chat_id, storage, nil}
+  def end_script(state) do
+    Passme.Chat.Server.update_chat_record(state.script.parent_chat.id, state.script.record)
+    state
   end
 
   defp validate(value) do

@@ -31,7 +31,11 @@ defmodule Passme.Chat.Script.NewRecord do
     reply(pu, pc, "Adding new record has been cancelled")
   end
 
-  def end_script({chat_id, storage, script}) do
+  def end_script(state) do
+    %{
+      storage: storage,
+      script: script
+    } = state
     %{
       parent_user: pu,
       parent_chat: pc
@@ -58,10 +62,8 @@ defmodule Passme.Chat.Script.NewRecord do
       end
 
     # Return new chat state
-    {
-      chat_id,
-      new_storage,
-      nil
-    }
+    state
+    |> Map.put(:storage, new_storage)
+    |> Map.put(:script, nil)
   end
 end

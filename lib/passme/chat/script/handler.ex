@@ -9,5 +9,5 @@ defmodule Passme.Chat.Script.Handler do
   Stops all inner processes of given script
   """
   @callback abort_wr(any()) :: :ok
-  @callback end_script({any(), any(), map()}) :: {any(), any(), nil}
+  @callback end_script(Passme.Chat.State.t()) :: Passme.Chat.State.t()
 end

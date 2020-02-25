@@ -7,20 +7,20 @@ defmodule Passme.Chat.Server do
   import Logger
 
   alias Passme.Chat.Storage.Record, as: Record
+  alias Passme.Chat.ChatActivity, as: Metrica
   alias Passme.Chat.Script, as: Script
+  alias Passme.Chat.State, as: State
+
 
   @expiry_idle_timeout :timer.seconds(30)
 
+  @spec init(any) :: {:ok, Passme.Chat.State.t(), 30_000}
   def init(chat_id) do
-    {
-      :ok,
-      {
-        chat_id,
-        Passme.Chat.chat_records(chat_id) || Passme.Chat.Storage.new([]),
-        nil
-      },
-      @expiry_idle_timeout
-    }
+    storage =
+      Passme.Chat.chat_records(chat_id)
+      |> Passme.Chat.Storage.new()
+
+    {:ok, State.new(chat_id, storage), @expiry_idle_timeout}
   end
 
   def start_link(chat_id) do
@@ -57,11 +57,6 @@ defmodule Passme.Chat.Server do
   def input_handler(chat_id, text, context) do
     get_chat_process(chat_id)
     |> GenServer.cast({:input, text, context})
-  end
-
-  def next_step(chat_id, step, context) do
-    get_chat_process(chat_id)
-    |> GenServer.cast({:next_step, step, context})
   end
 
   def script_new_record(chat_id, context) do
@@ -108,13 +103,12 @@ defmodule Passme.Chat.Server do
 
   ########### Server ###########
 
-  def handle_call(:script_abort, _from, {_, _, script} = state) when is_nil(script) do
-    {:reply, :error, state}
+  def handle_call(:script_abort, _from, %{script: script} = state) when is_nil(script) do
+    {:reply, :error, state, @expiry_idle_timeout}
   end
 
-  def handle_call(:script_abort, _from, {chat_id, storage, script}) do
-    Script.abort_wr(script)
-    {:reply, :ok, {chat_id, storage, nil}}
+  def handle_call(:script_abort, _from, state) do
+    {:reply, :ok, State.script_abort(state), @expiry_idle_timeout}
   end
 
   def handle_call({:command, _cmd, data}, _from, state) do
@@ -133,20 +127,10 @@ defmodule Passme.Chat.Server do
     {:reply, state, state, @expiry_idle_timeout}
   end
 
-  def handle_call({:get_record, record_id}, _from, state) do
-    record =
-      Enum.find(nil, fn {_storage_id, entry} ->
-        entry.id == record_id
-      end)
-
-    {:reply, record, state}
-  end
-
   def handle_cast({:update_record, fields}, state) do
-    {chat_id, storage, script} = state
-
+    IO.inspect(fields)
     new_entries =
-      storage
+      state.storage
       |> Passme.Chat.Storage.get_record(fields.record_id)
       |> case do
         {storage_id, storage_record} ->
@@ -154,25 +138,25 @@ defmodule Passme.Chat.Server do
           |> Passme.Chat.update_record(fields)
           |> case do
             {:ok, record} ->
-              ExGram.send_message(chat_id, "RMM.Chat: Record updated")
-              Map.put(storage.entries, storage_id, record)
+              ExGram.send_message(state.chat_id, "RMM.Chat: Record updated")
+              Map.put(state.storage.entries, storage_id, record)
 
             {:error, changeset} ->
-              debug(changeset)
-              ExGram.send_message(chat_id, "RMM.Chat: Error on updating record")
-              storage.entries
+              IO.inspect(changeset)
+              ExGram.send_message(state.chat_id, "RMM.Chat: Error on updating record")
+              state.storage.entries
           end
 
         nil ->
-          ExGram.send_message(chat_id, "RMM.Chat: Record not found in this chat")
+          ExGram.send_message(state.chat_id, "RMM.Chat: Record not found in this chat")
       end
-
-    {:noreply, {chat_id, Map.put(storage, :entries, new_entries), script}, @expiry_idle_timeout}
+    new_storage = Map.put(state.storage, :entries, new_entries)
+    {:noreply, Map.put(state, :storage, new_storage), @expiry_idle_timeout}
   end
 
   def handle_cast({:archive_record, storage_id}, state) do
 
-    {chat_id, storage, script} = state
+    %{storage: storage} = state
 
     entry = Map.get(storage.entries, storage_id)
 
@@ -180,11 +164,11 @@ defmodule Passme.Chat.Server do
       if entry do
         case Passme.Chat.archive_record(entry) do
           {:ok, entry} ->
-            ExGram.send_message(chat_id, "Record deleted")
+            ExGram.send_message(state.chat_id, "Record deleted")
+            # Because user can't delete entry, only set flag "archived"
             Passme.Chat.Storage.update(storage, storage_id, entry)
-            # Passme.Chat.Storage.delete(storage, storage_id)
           {:error, changeset} ->
-            ExGram.send_message(chat_id, "Error on deleting record")
+            ExGram.send_message(state.chat_id, "Error on deleting record")
             debug(changeset)
             storage
         end
@@ -192,143 +176,137 @@ defmodule Passme.Chat.Server do
         storage
       end
 
-    {:noreply, {chat_id, new_storage, script}, @expiry_idle_timeout}
+    {:noreply, Map.put(state, :storage, new_storage), @expiry_idle_timeout}
   end
 
   def handle_cast({:new_record, context}, state) do
-    {chat_id, storage, _script} = state
-
+    Metrica.request(context, state)
     {
       :noreply,
-      {
-        chat_id,
-        storage,
+      Map.put(
+        state,
+        :script,
         start_script(Passme.Chat.Script.NewRecord, context.from, context.message.chat)
-      },
+      ),
       @expiry_idle_timeout
     }
   end
 
-  def handle_cast({:show_record, record_id, _data}, state) do
-    {chat_id, _storage, _await} = state
+  def handle_cast({:show_record, record_id, context}, state) do
+    Metrica.request(context, state)
+    spawn(fn ->
+      case Passme.Chat.chat_record(record_id, state.chat_id) do
+        %Record{} = record ->
+          {text, opts} = Passme.Chat.Interface.record(record)
+          ExGram.send_message(state.chat_id, text, opts)
 
-    case Passme.Chat.chat_record(record_id, chat_id) do
-      %Record{} = record ->
-        {text, opts} = Passme.Chat.Interface.record(record)
-        ExGram.send_message(chat_id, text, opts)
-
-      _ ->
-        ExGram.send_message(chat_id, "Message not found")
-    end
-
+        _ ->
+          ExGram.send_message(state.chat_id, "Message not found")
+      end
+    end)
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:record_edit, _, _, _}, {chat_id, _, script} = state)
+  def handle_cast({:record_edit, _, _, _}, %{script: script} = state)
       when not is_nil(script) do
-    ExGram.send_message(chat_id, "Error: currently working another script")
-    {:noreply, {chat_id, state}, @expiry_idle_timeout}
+    ExGram.send_message(state.chat_id, "Error: currently working another script")
+    {:noreply, state, @expiry_idle_timeout}
   end
 
   def handle_cast({:record_edit, key, record_id, data}, state) do
-    {chat_id, storage, _} = state
+    pu = data.from
+    pc = data.message.chat
 
-    # Record in chat storage
-    new_script =
-      if data.message.chat.id == data.from.id do
-        storage.entries
-      else
-        {_, chat_storage, _} = Passme.Chat.Server.get_state(data.message.chat.id)
-        chat_storage.entries
-      end
-      |> Enum.find(nil, fn {_storage_id, entry} ->
-        entry.id == record_id
-      end)
-      # Check for record field availability
+    Metrica.request(data, state)
+
+    script =
+      Passme.Chat.record(record_id)
       |> case do
-        {_, _} -> Passme.Chat.Storage.Record.has_field?(key)
-        nil -> false
-      end
-      #
-      # TODO Check user can edit this record
-      #
-      |> if do
-        # Start edit script, what waiting for input
-        struct =
-          Map.put(%{}, key, nil)
-          |> Map.put(:record_id, record_id)
-          |> Map.put(:_field, key)
+        nil ->
+          ExGram.send_message(state.chat_id, "Record doesn't exists")
+          nil
 
-        start_script(Passme.Chat.Script.RecordFieldEdit, data.from, data.message.chat, struct)
+        record ->
+          with  true <- Passme.Chat.Storage.Record.has_field?(key),
+                true <- State.user_in_chat?(record.chat_id, pu.id) do
+                # Check here user can edit this record
+            data =
+              Map.put(%{}, key, nil)
+              |> Map.put(:record_id, record_id)
+              |> Map.put(:_field, key)
+
+            start_script(Passme.Chat.Script.RecordFieldEdit, pu, pc, data)
+          else
+            _ ->
+              ExGram.send_message(state.chat_id, "Not allowed to edit this record")
+              nil
+          end
       end
 
-    {:noreply, {chat_id, storage, new_script}, @expiry_idle_timeout}
+    {:noreply, Map.put(state, :script, script), @expiry_idle_timeout}
   end
 
   def handle_cast({:record_action, {:delete, record_id}, data}, state) do
-    {_, storage, _} = state
-    # Get storage from parent chat
-    if data.message.chat.id == data.from.id do
-      storage
-    else
-      {_, chat_storage, _} = Passme.Chat.Server.get_state(data.message.chat.id)
-      chat_storage
-    end
-    |> Passme.Chat.Storage.get_record(record_id)
+    Metrica.request(data, state)
+    pu = data.from
+
+    Passme.Chat.record(record_id)
     |> case do
-      {storage_id, _entry} ->
-        Passme.Chat.Server.archive_record(data.message.chat.id, storage_id)
-        # case Passme.archive_record(entry) do
-        #   {:ok, _} ->
-        #     ExGram.send_message(chat_id, "Record deleted")
-        #     Passme.Chat.Storage.delete(storage, storage_id)
-        #   {:error, changeset} ->
-        #     ExGram.send_message(chat_id, "Error on deleting record")
-        #     debug(changeset)
-        #     storage
-        # end
-      nil ->
-        ExGram.send_message(data.message.chat.id, "Record not found for given chat")
+      nil -> ExGram.send_message(state.chat_id, "Record doesn't exists")
+
+      record ->
+        with state <- Passme.Chat.Server.get_state(record.chat_id),
+             true <- State.user_in_chat?(state, pu.id),
+             {storage_id, _} <- Passme.Chat.Storage.get_record(state.storage, record_id) do
+              # Check here user can edit this record
+
+          Passme.Chat.Server.archive_record(record.chat_id, storage_id)
+        else
+          _ -> ExGram.send_message(state.chat_id, "Not allowed to edit this record")
+        end
     end
 
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:record_action, _, _}, {chat_id, _, _} = state) do
-    ExGram.send_message(chat_id, "Action is not defined")
+  def handle_cast({:record_action, _, _}, state) do
+    ExGram.send_message(state.chat_id, "Action is not defined")
     {:noreply, state, @expiry_idle_timeout}
   end
 
   def handle_cast(:list, state) do
-    {chat_id, storage, _script} = state
-    {text, opts} = Passme.Chat.Interface.list(storage.entries)
-    ExGram.send_message(chat_id, text, opts)
+    {text, opts} = Passme.Chat.Interface.list(state.storage.entries)
+    ExGram.send_message(state.chat_id, text, opts)
     {:noreply, state, @expiry_idle_timeout}
   end
 
   # Enter if awaiter (script) is not null
-  def handle_cast(
-        {:input, text, _context},
-        {chat_id, storage, script} = state
-      )
+  def handle_cast({:input, text, context}, %{script: script} = state)
       when not is_nil(script) do
+
+    Metrica.request(context, state)
+
     new_state =
       case Script.set_step_result(script, text) do
         {:ok, script} ->
+
           {status, script} =
             script
             |> Script.next_step()
             |> Script.start_step()
 
           if status == :end do
-            {^chat_id, storage, script} = Script.end_script({chat_id, storage, script})
-            {chat_id, storage, script}
+            state
+            |> Map.put(:script, script)
+            |> Script.end_script()
+            |> Map.put(:script, nil)
           else
-            {chat_id, storage, script}
+            state
+            |> Map.put(:script, script)
           end
 
         {:error, message} ->
-          ExGram.send_message(chat_id, message)
+          ExGram.send_message(state.chat_id, message)
           state
       end
 
@@ -344,9 +322,8 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_info(:await_input_timeout, state) do
-    {chat_id, storage, _script} = state
-    ExGram.send_message(chat_id, "Input timeout. Action was cancelled.")
-    {:noreply, {chat_id, storage, nil}}
+    ExGram.send_message(state.chat_id, "Input timeout. Action was cancelled.")
+    {:noreply, Map.put(state, :script, nil)}
   end
 
   #######

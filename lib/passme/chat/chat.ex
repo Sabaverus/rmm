@@ -8,7 +8,6 @@ defmodule Passme.Chat do
     Record
     |> Record.chat(chat_id)
     |> DB.all()
-    |> Passme.Chat.Storage.new()
   end
 
   def chat_record(record_id, chat_id) do
@@ -48,5 +47,33 @@ defmodule Passme.Chat do
     record
     |> Record.changeset(%{archived: true})
     |> DB.update()
+  end
+
+  @spec chat_users(integer()) :: list()
+  def chat_users(chat_id) do
+
+    Passme.Chat.Models.ChatUsers
+    |> Passme.Chat.Models.ChatUsers.where_chat(chat_id)
+    |> DB.all()
+  end
+
+  def relate_user_with_chat(chat_id, user_id) do
+    %Passme.Chat.Models.ChatUsers{}
+    |> Passme.Chat.Models.ChatUsers.changeset(%{
+      chat_id: chat_id,
+      user_id: user_id
+    })
+    |> DB.insert()
+  end
+
+  def user_in_chat?(chat_id, user_id) do
+    Passme.Chat.Models.ChatUsers
+    |> Passme.Chat.Models.ChatUsers.where_chat(chat_id)
+    |> Passme.Chat.Models.ChatUsers.where_user(user_id)
+    |> DB.one()
+    |> case do
+      nil -> false
+      _ -> true
+    end
   end
 end

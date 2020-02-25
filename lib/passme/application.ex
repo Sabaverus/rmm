@@ -16,6 +16,7 @@ defmodule Passme.Application do
       # Starts a worker by calling: Passme.Worker.start_link(arg)
       # {Passme.Worker, arg},
       Passme.Chat.Registry,
+      Passme.Chat.ChatActivity,
       Passme.Chat.Supervisor,
       ExGram,
       {Passme.Bot, [method: :polling, token: token]}
