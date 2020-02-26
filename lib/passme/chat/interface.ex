@@ -1,5 +1,14 @@
 defmodule Passme.Chat.Interface do
   @moduledoc false
+
+  @spec record_link(Passme.Chat.Storage.Record) :: {String.t(), Keyword.t()}
+  def record_link(record) do
+    {
+      "/r\\_#{record.id}",
+      [parse_mode: "Markdown"]
+    }
+  end
+
   def record(record) do
     text = "
 Detailed record:
@@ -54,7 +63,8 @@ Edit record:
       end)
       |> Enum.reduce("", fn
         {_id, v}, acc ->
-          acc <> "\n📋 Key: #{v.key}\n`Full record =>` /rec\\_#{v.id}\n"
+          {link, _} = record_link(v)
+          acc <> "\n📋 Key: #{v.key}\n`Full record =>` #{link}\n"
       end)
       |> case do
         "" -> "List is empty"

@@ -28,6 +28,10 @@ defmodule Passme.Chat.State do
     Map.put(state, :script, nil)
   end
 
+  @spec get_storage(any()) :: Passme.Chat.Storage.t()
+  def get_storage(state) do
+    state.storage
+  end
 
   @spec user_in_chat?(integer(), integer()) :: boolean
   def user_in_chat?(chat_id, user_id) when is_integer(chat_id) do

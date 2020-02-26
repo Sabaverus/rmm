@@ -89,7 +89,7 @@ defmodule Passme.Bot do
     answer(context, text, opts)
   end
 
-  def handle({:command, "rec_" <> record_id, data}, _ctx) do
+  def handle({:command, "r_" <> record_id, data}, _ctx) do
     Passme.Chat.Server.show_record(data.chat.id, String.to_integer(record_id), data)
   end
 

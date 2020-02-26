@@ -33,6 +33,7 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
   def end_script(state) do
     Passme.Chat.Server.update_chat_record(state.script.parent_chat.id, state.script.record)
     state
+    |> Map.put(:script, nil)
   end
 
   defp validate(value) do

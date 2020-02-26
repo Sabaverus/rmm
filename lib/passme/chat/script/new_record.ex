@@ -32,38 +32,25 @@ defmodule Passme.Chat.Script.NewRecord do
   end
 
   def end_script(state) do
-    %{
-      storage: storage,
-      script: script
-    } = state
-    %{
-      parent_user: pu,
-      parent_chat: pc
-    } = script
-
     new_storage =
-      script.record
-      |> Map.put(:author, script.parent_user.id)
-      |> Map.put(:chat_id, script.parent_chat.id)
+      state.script.record
+      |> Map.put(:author, state.script.parent_user.id)
+      |> Map.put(:chat_id, state.script.parent_chat.id)
       |> Passme.Chat.create_chat_record()
       |> case do
         {:ok, entry} ->
-          reply(pu, pc, "Record was added")
-
-          if pc.id !== pu.id do
-            reply(pc, pu, "Record was added by user @#{pu.username}")
-          end
-          # Record need put to chat state, not current!
-          Passme.Chat.Storage.put_record(storage, entry)
+          # Add record to chat where script is started
+          Passme.Chat.Server.add_record_to_chat(state.script.parent_chat.id, entry, state.script.parent_user)
 
         {:error, _changeset} ->
-          reply(pu, pc, "Error while adding new record")
-          storage
+          reply(state.script.parent_user, state.script.parent_chat, "Error while adding new record")
+          state.storage
       end
 
     # Return new chat state
     state
     |> Map.put(:storage, new_storage)
+    # Script cleanup
     |> Map.put(:script, nil)
   end
 end
