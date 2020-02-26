@@ -49,7 +49,14 @@ defmodule Passme.Chat.Script.Base do
         end
       end
 
-      def start_step(%__MODULE__{step: step} = script) do
+      def start_step(%__MODULE__{step: {_, step_data} = step} = script) do
+
+        config = %{
+          can_be_empty: false
+          # TODO self-deleting messages history
+        }
+        config = Map.merge(config, step_data)
+
         case step do
           :end ->
             {:end, finish(script)}
@@ -58,7 +65,12 @@ defmodule Passme.Chat.Script.Base do
             {:end, finish(script)}
 
           {key, data} ->
-            case reply(script.parent_user, script.parent_chat, ChatInterface.script_step(script)) do
+            IO.inspect(get_field_key(script))
+            case reply(
+                script.parent_user,
+                script.parent_chat,
+                ChatInterface.script_step(script, get_step_field_value(data, :can_be_empty, get_field_key(script)))
+              ) do
               :ok ->
                 {
                   :ok,
@@ -116,6 +128,19 @@ defmodule Passme.Chat.Script.Base do
           data.field
         else
           key
+        end
+      end
+
+      @spec get_step_field_value(map(), atom(), atom()) :: any() | nil
+      defp get_step_field_value(step, field, key) do
+        if Map.has_key?(step, field) do
+          if is_function(step[field]) do
+            step[field].(key)
+          else
+            step[field]
+          end
+        else
+          nil
         end
       end
 

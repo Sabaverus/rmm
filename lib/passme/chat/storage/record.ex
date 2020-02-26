@@ -29,7 +29,7 @@ defmodule Passme.Chat.Storage.Record do
       :chat_id,
       :archived
     ])
-    |> validate_required([:name, :value])
+    |> validate_required(required_fields())
   end
 
   def user(query, user_id) do
@@ -54,5 +54,20 @@ defmodule Passme.Chat.Storage.Record do
 
   def has_field?(_) do
     raise "#{__MODULE__}.has_field accept as parameter only atom type"
+  end
+
+  @spec field_can_be_empty?(atom()) :: boolean()
+  def field_can_be_empty?(field) do
+    Enum.find(required_fields(), nil, fn required ->
+      required == field
+    end)
+    |> case do
+      nil -> true
+      _ -> false
+    end
+  end
+
+  defp required_fields() do
+    [:name, :value]
   end
 end

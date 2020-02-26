@@ -74,10 +74,15 @@ defmodule Passme.Bot do
   end
 
   def handle(
-        {:callback_query, %{data: "script_abort"} = data},
-        _context
+        {:callback_query, %{data: "script_" <> action} = data},
+        context
       ) do
-    Passme.Chat.Server.script_abort(data.from.id)
+        case action do
+          "step_clean" ->
+            Passme.Chat.Server.input_handler(data.from.id, "", context)
+          "abort" ->
+            Passme.Chat.Server.script_abort(data.from.id)
+        end
   end
 
   def handle({:callback_query, _data}, context) do

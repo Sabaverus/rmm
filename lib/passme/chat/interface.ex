@@ -134,8 +134,25 @@ Edit record:
     }
   end
 
-  def script_step(%{step: step} = _script) do
+  def script_step(%{step: step} = _script, optional \\ false) do
     {_key, data} = step
+
+    keyboard = [
+        %ExGram.Model.InlineKeyboardButton{
+          text: "Cancel script",
+          callback_data: "script_abort"
+        }
+      ]
+    keyboard = if optional do
+      button = %ExGram.Model.InlineKeyboardButton{
+        text: "Clear value",
+        callback_data: "script_step_clean"
+      }
+      [button | keyboard]
+    else
+      keyboard
+    end
+    IO.inspect(keyboard)
 
     {
       data.text,
@@ -143,12 +160,7 @@ Edit record:
         parse_mode: "Markdown",
         reply_markup: %ExGram.Model.InlineKeyboardMarkup{
           inline_keyboard: [
-            [
-              %ExGram.Model.InlineKeyboardButton{
-                text: "Cancel script",
-                callback_data: "script_abort"
-              }
-            ]
+            keyboard
           ]
         }
       ]

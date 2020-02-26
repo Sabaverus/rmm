@@ -13,7 +13,8 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
        %{
          text: "Enter new value for selected field",
          next: :end,
-         validate: &validate(&1)
+         validate: &validate(&1),
+         can_be_empty: &Passme.Chat.Storage.Record.field_can_be_empty?(&1)
        }},
       {:end,
        %{
