@@ -5,19 +5,14 @@ defmodule Passme.Chat.Script.NewRecord do
 
   use Passme.Chat.Script.Base,
     steps: [
-      {:key,
+      {:name,
        %{
-         text: "Enter record key",
+         text: "Enter record name",
          next: :value
        }},
       {:value,
        %{
          text: "Enter record value",
-         next: :desc
-       }},
-      {:desc,
-       %{
-         text: "Enter description of record",
          next: :end
        }}
     ]

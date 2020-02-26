@@ -3,9 +3,10 @@ defmodule Passme.Repo.Migrations.ChatRecords do
 
   def change do
     create_if_not_exists table(:chat_records) do
+      add :name, :string
+      add :value, :string
       add :key, :string
       add :desc, :string
-      add :value, :string
       add :author, :bigint
       add :chat_id, :bigint
       add :archived, :boolean

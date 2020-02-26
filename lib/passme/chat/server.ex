@@ -199,14 +199,14 @@ defmodule Passme.Chat.Server do
         {text, opts} = Passme.Chat.Interface.record_link(record)
         ExGram.send_message(
           user_id,
-          "Record (#{text}) was added",
+          "Record\n#{record.name} => #{text}\nwas added ✅",
           opts
         )
 
         if state.chat_id !== user_id do
           ExGram.send_message(
             state.chat_id,
-            "Record (#{text}) was added by user @#{name}",
+            "Record\n#{record.name} => #{text}\nwas added by user @#{name}",
             opts
           )
         end

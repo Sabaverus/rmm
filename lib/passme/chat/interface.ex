@@ -14,14 +14,28 @@ defmodule Passme.Chat.Interface do
 Detailed record:
 =================================
 
-Name: #{record.desc}
-Key: #{record.key}
+Name: #{record.name}
 Value: #{record.value}
+Key: #{record.key}
+Description: #{record.desc}
 
 Created by [user](tg://user?id=#{record.author})
 
 Edit record:
     "
+
+    key_text = if is_nil(record.key) do
+        "➕ Add key"
+      else
+        "✏️ Edit key"
+      end
+
+    desc_text = if is_nil(record.desc) do
+        "➕ Add description"
+      else
+        "✏️ Edit description"
+      end
+
 
     {
       text,
@@ -31,22 +45,26 @@ Edit record:
           inline_keyboard: [
             [
               %ExGram.Model.InlineKeyboardButton{
-                text: "Edit name",
+                text: "✏️ Edit name",
                 callback_data: "record_edit_name_#{record.id}"
               },
               %ExGram.Model.InlineKeyboardButton{
-                text: "Edit key",
-                callback_data: "record_edit_key_#{record.id}"
-              },
-              %ExGram.Model.InlineKeyboardButton{
-                text: "Edit value",
+                text: "✏️ Edit value",
                 callback_data: "record_edit_value_#{record.id}"
               }
             ],
             [
               %ExGram.Model.InlineKeyboardButton{
-                text: "Delete",
+                text: "❌ Delete",
                 callback_data: "record_action_delete_#{record.id}"
+              },
+              %ExGram.Model.InlineKeyboardButton{
+                text: key_text,
+                callback_data: "record_edit_key_#{record.id}"
+              },
+              %ExGram.Model.InlineKeyboardButton{
+                text: desc_text,
+                callback_data: "record_edit_desc_#{record.id}"
               }
             ]
           ]
@@ -110,7 +128,7 @@ Edit record:
   def not_in_conversation(%{username: username}) do
     {
       "@#{username}\n
-Для добавления записи добавьте бота в приватный чат @MoncyPasswordsBot
+Для добавления записи добавьте бота в приватный чат
       ",
       []
     }

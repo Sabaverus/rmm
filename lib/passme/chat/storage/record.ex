@@ -6,9 +6,10 @@ defmodule Passme.Chat.Storage.Record do
   import Ecto.Changeset
 
   schema "chat_records" do
+    field :name, :string
+    field :value, :string
     field :key, :string
     field :desc, :string
-    field :value, :string
     field :author, :integer
     field :chat_id, :integer
     field :archived, :boolean
@@ -22,12 +23,13 @@ defmodule Passme.Chat.Storage.Record do
     |> cast(attrs, [
       :key,
       :desc,
+      :name,
       :value,
       :author,
       :chat_id,
       :archived
     ])
-    |> validate_required([:key, :value])
+    |> validate_required([:name, :value])
   end
 
   def user(query, user_id) do

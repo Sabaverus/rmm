@@ -47,11 +47,15 @@ defmodule Passme.Bot do
         "name_" <> record_id ->
           {:name, record_id}
 
+        "value_" <> record_id ->
+          {:value, record_id}
+
         "key_" <> record_id ->
           {:key, record_id}
 
-        "value_" <> record_id ->
-          {:value, record_id}
+
+        "desc_" <> record_id ->
+          {:desc, record_id}
 
         _ ->
           answer(context, "Undefined edit command")
