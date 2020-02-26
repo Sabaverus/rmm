@@ -3,7 +3,7 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
 
   import Passme.Chat.Util
 
-  defp get_field_key(%{record: %{_field: field}}) do
+  defp get_field_key(%{data: %{_field: field}}) do
     field
   end
 
@@ -31,7 +31,7 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
   end
 
   def end_script(state) do
-    Passme.Chat.Server.update_chat_record(state.script.parent_chat.id, state.script.record)
+    Passme.Chat.Server.update_chat_record(state.script.parent_chat.id, state.script.data)
     state
     |> Map.put(:script, nil)
   end

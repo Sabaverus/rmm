@@ -22,15 +22,15 @@ defmodule Passme.Chat.Script.Base do
                 timer: nil,
                 parent_chat: nil,
                 parent_user: nil,
-                record: nil
+                data: nil
 
-      def new(user, chat, record \\ %Passme.Chat.Storage.Record{}) do
+      def new(user, chat, data \\ %{}) do
         %__MODULE__{
           step: first_step(),
           timer: Process.send_after(self(), :await_input_timeout, unquote(wait_time)),
           parent_chat: chat,
           parent_user: user,
-          record: record
+          data: data
         }
       end
 
@@ -41,7 +41,7 @@ defmodule Passme.Chat.Script.Base do
               :ok,
               script
               |> Map.put(:timer, reset_input_timer(script.timer))
-              |> Map.put(:record, Map.put(script.record, get_field_key(script), escape(value)))
+              |> Map.put(:data, Map.put(script.data, get_field_key(script), escape(value)))
             }
 
           {:error, msg} ->

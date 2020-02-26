@@ -33,7 +33,7 @@ defmodule Passme.Chat.Script.NewRecord do
 
   def end_script(state) do
     new_storage =
-      state.script.record
+      state.script.data
       |> Map.put(:author, state.script.parent_user.id)
       |> Map.put(:chat_id, state.script.parent_chat.id)
       |> Passme.Chat.create_chat_record()

@@ -185,7 +185,7 @@ defmodule Passme.Chat.Server do
       Map.put(
         state,
         :script,
-        start_script(Passme.Chat.Script.NewRecord, context.from, context.message.chat)
+        start_script(Passme.Chat.Script.NewRecord, context.from, context.message.chat, %Record{})
       ),
       @expiry_idle_timeout
     }
