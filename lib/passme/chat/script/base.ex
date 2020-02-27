@@ -3,10 +3,14 @@ defmodule Passme.Chat.Script.Base do
 
   defmacro __using__(ops) do
     import Passme.Chat.Util
+    import Logger
 
     alias Passme.Chat.Interface, as: ChatInterface
+    alias Passme.Chat.Script.Step
 
     wait_time = :timer.seconds(30)
+
+    script_input_timeout = :script_input_timeout
 
     steps =
       case Keyword.fetch(ops, :steps) do
@@ -27,7 +31,7 @@ defmodule Passme.Chat.Script.Base do
       def new(user, chat, data \\ %{}) do
         %__MODULE__{
           step: first_step(),
-          timer: Process.send_after(self(), :await_input_timeout, unquote(wait_time)),
+          timer: Process.send_after(self(), unquote(script_input_timeout), unquote(wait_time)),
           parent_chat: chat,
           parent_user: user,
           data: data
@@ -49,40 +53,36 @@ defmodule Passme.Chat.Script.Base do
         end
       end
 
-      def start_step(%__MODULE__{step: {_, step_data} = step} = script) do
+      def start_step(%__MODULE__{step: :end} = script), do: {:end, finish(script)}
+      def start_step(%__MODULE__{step: {:end, _}} = script), do: {:end, finish(script)}
+      def start_step(%__MODULE__{step: {_, %{processing: true}}} = script), do: {:error, script}
 
-        config = %{
-          can_be_empty: false
-          # TODO self-deleting messages history
-        }
-        config = Map.merge(config, step_data)
+      def start_step(%__MODULE__{step: {key, step}} = script) do
+        # If user tried to start script from group-chat, bot doesn't added to user private chat
+        # telegram returns error
+        case step_message(script) do
+          :ok ->
+            {
+              :ok,
+              script
+              |> Map.put(:timer, reset_input_timer(script.timer))
+              |> Map.put(:step, {key, Map.put(step, :processing, true)})
+            }
 
-        case step do
-          :end ->
-            {:end, finish(script)}
-
-          {:end, step} ->
-            {:end, finish(script)}
-
-          {key, data} ->
-            IO.inspect(get_field_key(script))
-            case reply(
-                script.parent_user,
-                script.parent_chat,
-                ChatInterface.script_step(script, get_step_field_value(data, :can_be_empty, get_field_key(script)))
-              ) do
-              :ok ->
-                {
-                  :ok,
-                  script
-                  |> Map.put(:timer, reset_input_timer(script.timer))
-                  |> Map.put(:step, {key, Map.put(data, :processing, true)})
-                }
-
-              :error ->
-                {:ok, script}
-            end
+          :error ->
+            info("Target user not added this bot to private chat to start script")
+            {:ok, script}
         end
+      end
+
+      defp step_message(%__MODULE__{step: {_, step}} = script) do
+        can_be_empty = get_step_key_value(step, :can_be_empty, get_field_key(script))
+
+        reply(
+          script.parent_user,
+          script.parent_chat,
+          ChatInterface.script_step(script, can_be_empty)
+        )
       end
 
       def next_step(%{step: step} = script) do
@@ -94,15 +94,15 @@ defmodule Passme.Chat.Script.Base do
         abort(script)
       end
 
-      defp validate_value(step, value) do
-        if Map.has_key?(step, :validate) do
-          apply(step.validate, [value])
-        else
-          :ok
-        end
-      end
+      defp validate_value(%Step{validate: nil}, _), do: :ok
 
-      @spec get_next_step({atom(), map()}) :: {atom(), map()}
+      defp validate_value(%Step{validate: fun}, value) when is_function(fun),
+        do: apply(fun, [value])
+
+      defp validate_value(%Step{validate: fun}, _),
+        do: raise("#{Step} key validate must be function")
+
+      @spec get_next_step({atom(), Step.t()}) :: {atom(), Step.t()}
       defp get_next_step({_key, step}) do
         Enum.find(unquote(steps), :end, fn {x, _} ->
           x == step.next
@@ -120,10 +120,10 @@ defmodule Passme.Chat.Script.Base do
 
       defp reset_input_timer(timer) do
         cancel_timer(timer)
-        Process.send_after(self(), :await_input_timeout, unquote(wait_time))
+        Process.send_after(self(), unquote(script_input_timeout), unquote(wait_time))
       end
 
-      defp get_field_key(%{step: {key, data}}) do
+      defp get_field_key(%__MODULE__{step: {key, data}}) do
         if Map.has_key?(data, :field) do
           data.field
         else
@@ -131,18 +131,25 @@ defmodule Passme.Chat.Script.Base do
         end
       end
 
-      @spec get_step_field_value(map(), atom(), atom()) :: any() | nil
-      defp get_step_field_value(step, field, key) do
-        if Map.has_key?(step, field) do
-          if is_function(step[field]) do
-            step[field].(key)
-          else
-            step[field]
-          end
+      defoverridable get_field_key: 1
+
+      @spec get_step_key_value(Step.t(), atom()) :: any()
+      defp get_step_key_value(step, field) do
+        Map.get(step, field)
+      end
+
+      @spec get_step_key_value(Step.t(), atom(), any()) :: any()
+      defp get_step_key_value(step, field, arg) do
+        field_value = Map.get(step, field)
+
+        if is_function(field_value) do
+          field_value.(arg)
         else
-          nil
+          field_value
         end
       end
+
+      defp escape(nil), do: nil
 
       defp escape(value) do
         value

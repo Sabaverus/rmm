@@ -53,7 +53,6 @@ defmodule Passme.Bot do
         "key_" <> record_id ->
           {:key, record_id}
 
-
         "desc_" <> record_id ->
           {:desc, record_id}
 
@@ -62,10 +61,9 @@ defmodule Passme.Bot do
           {nil, command}
       end
 
-    id = String.to_integer(record_id)
-
-    if is_atom(field) do
+    unless is_nil(field) do
       if Passme.Chat.Storage.Record.has_field?(field) do
+        id = String.to_integer(record_id)
         Passme.Chat.Server.script_record_edit(data.from.id, data, field, id)
       else
         answer(context, "Record field doesn't exists or not allowed to edit (#{field})")
@@ -77,12 +75,13 @@ defmodule Passme.Bot do
         {:callback_query, %{data: "script_" <> action} = data},
         context
       ) do
-        case action do
-          "step_clean" ->
-            Passme.Chat.Server.input_handler(data.from.id, "", context)
-          "abort" ->
-            Passme.Chat.Server.script_abort(data.from.id)
-        end
+    case action do
+      "step_clean" ->
+        Passme.Chat.Server.input_handler(data.from.id, nil, context)
+
+      "abort" ->
+        Passme.Chat.Server.script_abort(data.from.id)
+    end
   end
 
   def handle({:callback_query, _data}, context) do

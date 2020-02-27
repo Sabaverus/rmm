@@ -51,7 +51,6 @@ defmodule Passme.Chat do
 
   @spec chat_users(integer()) :: list()
   def chat_users(chat_id) do
-
     Passme.Chat.Models.ChatUsers
     |> Passme.Chat.Models.ChatUsers.where_chat(chat_id)
     |> DB.all()

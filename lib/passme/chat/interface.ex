@@ -24,18 +24,19 @@ Created by [user](tg://user?id=#{record.author})
 Edit record:
     "
 
-    key_text = if is_nil(record.key) do
+    key_text =
+      if is_nil(record.key) do
         "➕ Add key"
       else
         "✏️ Edit key"
       end
 
-    desc_text = if is_nil(record.desc) do
+    desc_text =
+      if is_nil(record.desc) do
         "➕ Add description"
       else
         "✏️ Edit description"
       end
-
 
     {
       text,
@@ -138,21 +139,23 @@ Edit record:
     {_key, data} = step
 
     keyboard = [
-        %ExGram.Model.InlineKeyboardButton{
-          text: "Cancel script",
-          callback_data: "script_abort"
-        }
-      ]
-    keyboard = if optional do
-      button = %ExGram.Model.InlineKeyboardButton{
-        text: "Clear value",
-        callback_data: "script_step_clean"
+      %ExGram.Model.InlineKeyboardButton{
+        text: "Cancel script",
+        callback_data: "script_abort"
       }
-      [button | keyboard]
-    else
-      keyboard
-    end
-    IO.inspect(keyboard)
+    ]
+
+    keyboard =
+      if optional do
+        button = %ExGram.Model.InlineKeyboardButton{
+          text: "Clear value",
+          callback_data: "script_step_clean"
+        }
+
+        [button | keyboard]
+      else
+        keyboard
+      end
 
     {
       data.text,

@@ -2,11 +2,11 @@ defmodule Passme.Chat.State do
   @moduledoc false
 
   @type t :: %Passme.Chat.State{
-    chat_id: integer(),
-    storage: %Passme.Chat.Storage{},
-    script: Passme.Chat.Script.Handler | nil,
-    users: list()
-  }
+          chat_id: integer(),
+          storage: %Passme.Chat.Storage{},
+          script: Passme.Chat.Script.Handler | nil,
+          users: list()
+        }
 
   defstruct chat_id: nil, storage: nil, script: nil, users: []
 
@@ -47,13 +47,13 @@ defmodule Passme.Chat.State do
     |> case do
       nil ->
         false
+
       user ->
         not user.removed
     end
   end
 
   def bind_user_to_chat(state, user_id) do
-
     new_users =
       if user_in_chat?(state, user_id) do
         state.users
@@ -62,13 +62,14 @@ defmodule Passme.Chat.State do
         |> case do
           {:ok, user} ->
             [user | state.users]
+
           {:error, _changeset} ->
             warn("#{__MODULE__}.bind_user_to_chat problems while binding user to chat")
         end
       end
-      Map.put(state, :users, new_users)
+
+    Map.put(state, :users, new_users)
   end
 
   #### Private methods
-
 end

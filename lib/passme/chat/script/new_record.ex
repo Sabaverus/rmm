@@ -3,18 +3,13 @@ defmodule Passme.Chat.Script.NewRecord do
 
   import Passme.Chat.Util
 
+  alias Passme.Chat.Script.Step
+  alias Passme.Chat.Server, as: ChatServer
+
   use Passme.Chat.Script.Base,
     steps: [
-      {:name,
-       %{
-         text: "Enter record name",
-         next: :value
-       }},
-      {:value,
-       %{
-         text: "Enter record value",
-         next: :end
-       }}
+      {:name, Step.new("Enter record name", :value)},
+      {:value, Step.new("Enter record value", :end)}
     ]
 
   def abort(script) do
@@ -35,10 +30,21 @@ defmodule Passme.Chat.Script.NewRecord do
       |> case do
         {:ok, entry} ->
           # Add record to chat where script is started
-          Passme.Chat.Server.add_record_to_chat(state.script.parent_chat.id, entry, state.script.parent_user)
+          ChatServer.add_record_to_chat(
+            state.script.parent_chat.id,
+            entry,
+            state.script.parent_user
+          )
+
+          state.storage
 
         {:error, _changeset} ->
-          reply(state.script.parent_user, state.script.parent_chat, "Error while adding new record")
+          reply(
+            state.script.parent_user,
+            state.script.parent_chat,
+            "Error while adding new record"
+          )
+
           state.storage
       end
 

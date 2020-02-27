@@ -30,9 +30,13 @@ defmodule Passme.Chat.ChatActivity do
             Passme.Chat.relate_user_with_chat(chat.id, user.id)
           end
         end
-      %{from: _user} -> :ok
+
+      %{from: _user} ->
+        :ok
+
+      _ -> :ok
     end
+
     {:noreply, nil}
   end
-
 end
