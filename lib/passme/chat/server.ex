@@ -6,9 +6,10 @@ defmodule Passme.Chat.Server do
 
   import Logger
 
-  alias Passme.Chat.Storage.Record, as: Record
-  alias Passme.Chat.Script, as: Script
-  alias Passme.Chat.State, as: State
+  alias Passme.Chat.Storage.Record
+  alias Passme.Chat.Script
+  alias Passme.Chat.State
+  alias Passme.Bot
 
   @expiry_idle_timeout :timer.seconds(60)
 
@@ -123,17 +124,17 @@ defmodule Passme.Chat.Server do
           |> Passme.Chat.update_record(fields)
           |> case do
             {:ok, record} ->
-              {text, opts} = Passme.Chat.Interface.record_link(record)
-              ExGram.send_message(state.chat_id, "RMM.Chat: Record #{text} updated", opts)
+              {link, opts} = Passme.Chat.Interface.record_link(record)
+              Bot.msg(state.chat_id, "Record #{link} was updated", opts)
               Map.put(state.storage.entries, storage_id, record)
 
             {:error, _changeset} ->
-              ExGram.send_message(state.chat_id, "RMM.Chat: Error on updating record")
+              Bot.msg(state.chat_id, "Error on updating record")
               state.storage.entries
           end
 
         nil ->
-          ExGram.send_message(state.chat_id, "RMM.Chat: Record not found in this chat")
+          Bot.msg(state.chat_id, "Record not found in this chat")
       end
 
     new_storage = Map.put(state.storage, :entries, new_entries)
@@ -149,12 +150,12 @@ defmodule Passme.Chat.Server do
       if entry do
         case Passme.Chat.archive_record(entry) do
           {:ok, entry} ->
-            ExGram.send_message(state.chat_id, "Record deleted")
             # Because user can't delete entry, only set flag "archived"
             Passme.Chat.Storage.update(storage, storage_id, entry)
+            Bot.msg(state.chat_id, "Record deleted")
 
           {:error, changeset} ->
-            ExGram.send_message(state.chat_id, "Error on deleting record")
+            Bot.msg(state.chat_id, "Error on deleting record")
             debug(changeset)
             storage
         end
@@ -187,14 +188,14 @@ defmodule Passme.Chat.Server do
       %{id: user_id, username: name} ->
         {text, opts} = Passme.Chat.Interface.record_link(record)
 
-        ExGram.send_message(
+        Bot.msg(
           user_id,
           "Record\n#{record.name} => #{text}\nwas added ✅",
           opts
         )
 
         if state.chat_id !== user_id do
-          ExGram.send_message(
+          Bot.msg(
             state.chat_id,
             "Record\n#{record.name} => #{text}\nwas added by user @#{name}",
             opts
@@ -219,10 +220,10 @@ defmodule Passme.Chat.Server do
       case Passme.Chat.chat_record(record_id, state.chat_id) do
         %Record{} = record ->
           {text, opts} = Passme.Chat.Interface.record(record)
-          ExGram.send_message(state.chat_id, text, opts)
+          Bot.msg(state.chat_id, text, opts)
 
         _ ->
-          ExGram.send_message(state.chat_id, "Message not found")
+          Bot.msg(state.chat_id, "Message not found")
       end
     end)
 
@@ -231,7 +232,7 @@ defmodule Passme.Chat.Server do
 
   def handle_cast({:record_edit, _, _, _}, %{script: script} = state)
       when not is_nil(script) do
-    ExGram.send_message(state.chat_id, "Error: currently working another script")
+    Bot.msg(state.chat_id, "Error: currently working another script")
     {:noreply, state, @expiry_idle_timeout}
   end
 
@@ -245,7 +246,7 @@ defmodule Passme.Chat.Server do
       Passme.Chat.record(record_id)
       |> case do
         nil ->
-          ExGram.send_message(state.chat_id, "Record doesn't exists")
+          Bot.msg(state.chat_id, "Record doesn't exists")
           nil
 
         record ->
@@ -260,7 +261,8 @@ defmodule Passme.Chat.Server do
             start_script(Passme.Chat.Script.RecordFieldEdit, pu, pc, data)
           else
             _ ->
-              ExGram.send_message(state.chat_id, "Not allowed to edit this record")
+              Bot.msg(state.chat_id, "Not allowed to edit this record")
+              |> Bot.private_chat_requested(pc.id, pu)
               nil
           end
       end
@@ -274,7 +276,7 @@ defmodule Passme.Chat.Server do
     Passme.Chat.record(record_id)
     |> case do
       nil ->
-        ExGram.send_message(state.chat_id, "Record doesn't exists")
+        Bot.msg(state.chat_id, "Record doesn't exists")
 
       record ->
         with state <- Passme.Chat.Server.get_state(record.chat_id),
@@ -284,7 +286,7 @@ defmodule Passme.Chat.Server do
 
           Passme.Chat.Server.archive_record(record.chat_id, storage_id)
         else
-          _ -> ExGram.send_message(state.chat_id, "Not allowed to edit this record")
+          _ -> Bot.msg(state.chat_id, "Not allowed to edit this record")
         end
     end
 
@@ -292,13 +294,12 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_cast({:record_action, _, _}, state) do
-    ExGram.send_message(state.chat_id, "Action is not defined")
+    Bot.msg(state.chat_id, "Action is not defined")
     {:noreply, state, @expiry_idle_timeout}
   end
 
   def handle_cast(:list, state) do
-    {text, opts} = Passme.Chat.Interface.list(state.storage.entries)
-    ExGram.send_message(state.chat_id, text, opts)
+    Bot.msg(state.chat_id, Passme.Chat.Interface.list(state.storage.entries))
     {:noreply, state, @expiry_idle_timeout}
   end
 
@@ -326,7 +327,7 @@ defmodule Passme.Chat.Server do
           end
 
         {:error, message} ->
-          ExGram.send_message(state.chat_id, message)
+          Bot.msg(state.chat_id, message)
           state
       end
 
@@ -342,22 +343,25 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_info(:script_input_timeout, state) do
-    ExGram.send_message(state.chat_id, "Input timeout. Action was cancelled.")
+    Bot.msg(state.chat_id, "Input timeout. Action was cancelled.")
     {:noreply, Map.put(state, :script, nil)}
   end
 
   #######
 
+  @spec get_chat_process(integer()) :: pid()
   defp get_chat_process(chat_id) do
     Passme.Chat.Supervisor.get_chat_process(chat_id)
   end
 
+  @spec start_script(Passme.Chat.Script.Handler, map(), map()) :: Script.t()
   def start_script(module, user, chat) do
     script = apply(module, :new, [user, chat])
     {:ok, script} = Script.start_step(script)
     script
   end
 
+  @spec start_script(Passme.Chat.Script.Handler, map(), map(), map()) :: Script.t()
   def start_script(module, user, chat, struct) do
     script = apply(module, :new, [user, chat, struct])
     {:ok, script} = Script.start_step(script)

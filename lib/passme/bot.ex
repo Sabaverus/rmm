@@ -13,6 +13,38 @@ defmodule Passme.Bot do
 
   def bot(), do: @bot
 
+  ########### Client ###########
+
+  def msg(%{id: chat_id}, text) when is_bitstring(text), do: msg(chat_id, text, [])
+  def msg(%{id: chat_id}, {text, opts}), do: msg(chat_id, text, opts)
+  def msg(chat_id, text) when is_bitstring(text), do: msg(chat_id, text, [])
+  def msg(chat_id, {text, opts}), do: msg(chat_id, text, opts)
+
+  @spec msg(integer() | %{id: String.t() | integer()}, String.t(), Keyword.t())
+     :: {:ok, map()} |
+        {:not_in_conversation, map()} |
+        {:undefined, String.t(), map()} |
+        {:error, String.t(), map()}
+  @doc """
+    Send message to target chat
+  """
+  def msg(%{id: chat_id}, text, opts), do: msg(chat_id, text, opts)
+  def msg(chat_id, text, opts) when is_integer(chat_id) do
+    ExGram.send_message(chat_id, text, opts)
+    |> process_result()
+  end
+
+  @doc """
+  Send message with information "bot must be added in private chat" if bot not added to private chat
+  """
+  def private_chat_requested({:not_in_conversation, _}, chat_id, user) do
+    unless chat_id == user.id do
+      msg(chat_id, Passme.Chat.Interface.not_in_conversation(user))
+    end
+    true
+  end
+  def private_chat_requested(_, _, _), do: false
+
   ########### Server ###########
 
   def handle({:regex, _key, _msg}, _ctx) do
@@ -116,5 +148,46 @@ defmodule Passme.Bot do
   def handle({:command, cmd, data}, context) do
     Metrica.request(context)
     Passme.Chat.Server.handle_command(data.chat.id, cmd, data)
+  end
+
+  ########### Private ###########
+
+  defp process_result({:ok, message}), do: {:ok, message}
+  defp process_result({:error, result}) do
+    result
+    |> process_ex_error()
+  end
+
+  defp process_ex_error(error) do
+    case error.code do
+      :response_status_not_match ->
+        process_tg_message(error.message)
+
+      _ ->
+        {:undefined, "Undefined error from ExGram.send_message()", error}
+    end
+  end
+
+  defp process_tg_message(message) do
+    case Jason.decode(message, keys: :atoms) do
+      {:ok, %{error_code: _} = msg} ->
+        process_tg_error(msg)
+
+      {:ok, msg} ->
+        {:undefined, "Undefined telegram message", msg}
+
+      {:error, %Jason.DecodeError{} = jason_error} ->
+        {:error, "Unexpected error due parsing error json", jason_error.data}
+    end
+  end
+
+  defp process_tg_error(msg) do
+    case msg do
+      %{error_code: 403} ->
+        {:not_in_conversation, msg}
+
+      %{error_code: code} ->
+        {:undefined, "Unexpected telegram code #{code}", msg}
+    end
   end
 end

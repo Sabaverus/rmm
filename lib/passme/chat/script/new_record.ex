@@ -1,10 +1,9 @@
 defmodule Passme.Chat.Script.NewRecord do
   @moduledoc false
 
-  import Passme.Chat.Util
-
   alias Passme.Chat.Script.Step
   alias Passme.Chat.Server, as: ChatServer
+  alias Passme.Bot
 
   use Passme.Chat.Script.Base,
     steps: [
@@ -12,13 +11,8 @@ defmodule Passme.Chat.Script.NewRecord do
       {:value, Step.new("Enter record value", :end)}
     ]
 
-  def abort(script) do
-    %{
-      parent_user: pu,
-      parent_chat: pc
-    } = script
-
-    reply(pu, pc, "Adding new record has been cancelled")
+  def abort(%{parent_user: pu}) do
+    Bot.msg(pu, "Adding new record has been cancelled")
   end
 
   def end_script(state) do
@@ -39,11 +33,7 @@ defmodule Passme.Chat.Script.NewRecord do
           state.storage
 
         {:error, _changeset} ->
-          reply(
-            state.script.parent_user,
-            state.script.parent_chat,
-            "Error while adding new record"
-          )
+          Bot.msg(state.script.parent_user, "Error while adding new record")
 
           state.storage
       end

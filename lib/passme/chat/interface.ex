@@ -128,8 +128,8 @@ Edit record:
   @spec not_in_conversation(map()) :: {String.t(), Keyword.t()}
   def not_in_conversation(%{username: username}) do
     {
-      "@#{username}\n
-Для добавления записи добавьте бота в приватный чат
+      "@#{username}
+Для работы с записями добавьте бота в приватный чат
       ",
       []
     }

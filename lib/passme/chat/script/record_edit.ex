@@ -1,11 +1,10 @@
 defmodule Passme.Chat.Script.RecordFieldEdit do
   @moduledoc false
 
-  import Passme.Chat.Util
-
   alias Passme.Chat.Script.Step
   alias Passme.Chat.Storage.Record
   alias Passme.Chat.Server, as: ChatServer
+  alias Passme.Bot
 
   use Passme.Chat.Script.Base,
     steps: [
@@ -23,13 +22,8 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
        )}
     ]
 
-  def abort(script) do
-    %{
-      parent_user: pu,
-      parent_chat: pc
-    } = script
-
-    reply(pu, pc, "Record field edit has been cancelled")
+  def abort(%{parent_user: pu}) do
+    Bot.msg(pu, "Record field edit has been cancelled")
   end
 
   def end_script(state) do
@@ -39,7 +33,7 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
     |> Map.put(:script, nil)
   end
 
-  # Overrided from parent module
+  # Overrided from Passme.Chat.Script.Base module
   # making step key :field dynamic, if field-key will be added in script data as :_field before
   # initialize script
   @spec get_field_key(Passme.Chat.Script.Base.t()) :: atom()

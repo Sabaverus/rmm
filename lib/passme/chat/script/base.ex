@@ -2,11 +2,11 @@ defmodule Passme.Chat.Script.Base do
   @moduledoc false
 
   defmacro __using__(ops) do
-    import Passme.Chat.Util
     import Logger
 
     alias Passme.Chat.Interface, as: ChatInterface
     alias Passme.Chat.Script.Step
+    alias Passme.Bot
 
     wait_time = :timer.seconds(30)
 
@@ -61,7 +61,7 @@ defmodule Passme.Chat.Script.Base do
         # If user tried to start script from group-chat, bot doesn't added to user private chat
         # telegram returns error
         case step_message(script) do
-          :ok ->
+          {:ok, _} ->
             {
               :ok,
               script
@@ -69,20 +69,16 @@ defmodule Passme.Chat.Script.Base do
               |> Map.put(:step, {key, Map.put(step, :processing, true)})
             }
 
-          :error ->
+          {:not_in_conversation, _} = tup ->
             info("Target user not added this bot to private chat to start script")
+            Bot.private_chat_requested(tup, script.parent_chat.id, script.parent_user)
             {:ok, script}
         end
       end
 
       defp step_message(%__MODULE__{step: {_, step}} = script) do
         can_be_empty = get_step_key_value(step, :can_be_empty, get_field_key(script))
-
-        reply(
-          script.parent_user,
-          script.parent_chat,
-          ChatInterface.script_step(script, can_be_empty)
-        )
+        Bot.msg(script.parent_user, ChatInterface.script_step(script, can_be_empty))
       end
 
       def next_step(%{step: step} = script) do
