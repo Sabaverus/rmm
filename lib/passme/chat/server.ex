@@ -109,18 +109,6 @@ defmodule Passme.Chat.Server do
     {:reply, :ok, State.script_abort(state), @expiry_idle_timeout}
   end
 
-  def handle_call({:command, _cmd, data}, _from, state) do
-    ExGram.send_message(data[:chat][:id], "Test MarkdownV2 /r\\_2 [Record](/r_2)",
-      parse_mode: "MarkdownV2"
-    )
-
-    ExGram.send_message(data[:chat][:id], "Test HTML /r_2 <a href=\"/r_2\">Record</a>",
-      parse_mode: "HTML"
-    )
-
-    {:reply, [], state, @expiry_idle_timeout}
-  end
-
   def handle_call(:get_state, _from, state) do
     {:reply, state, state, @expiry_idle_timeout}
   end
