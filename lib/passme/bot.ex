@@ -4,6 +4,8 @@ defmodule Passme.Bot do
 
   import Logger
 
+  alias Passme.Chat.ChatActivity, as: Metrica
+
   use ExGram.Bot,
     name: @bot
 
@@ -17,18 +19,21 @@ defmodule Passme.Bot do
     debug("Handle message")
   end
 
-  def handle({:callback_query, %{data: "list"} = data}, _context) do
+  def handle({:callback_query, %{data: "list"} = data}, context) do
+    Metrica.request(context)
     Passme.Chat.Server.print_list(data.message.chat.id)
   end
 
-  def handle({:callback_query, %{data: "new_record"} = data}, _context) do
+  def handle({:callback_query, %{data: "new_record"} = data}, context) do
+    Metrica.request(context)
     Passme.Chat.Server.script_new_record(data.from.id, data)
   end
 
   def handle(
         {:callback_query, %{data: "record_action_" <> action} = data},
-        _context
+        context
       ) do
+    Metrica.request(context)
     {type, record_id} =
       case action do
         "delete_" <> record_id -> {:delete, String.to_integer(record_id)}
@@ -42,6 +47,8 @@ defmodule Passme.Bot do
         {:callback_query, %{data: "record_edit_" <> command} = data},
         context
       ) do
+    Metrica.request(context)
+
     {field, record_id} =
       case command do
         "name_" <> record_id ->
@@ -75,6 +82,7 @@ defmodule Passme.Bot do
         {:callback_query, %{data: "script_" <> action} = data},
         context
       ) do
+    Metrica.request(context)
     case action do
       "step_clean" ->
         Passme.Chat.Server.input_handler(data.from.id, nil, context)
@@ -85,23 +93,28 @@ defmodule Passme.Bot do
   end
 
   def handle({:callback_query, _data}, context) do
+    Metrica.request(context)
     answer(context, "Undefined query")
   end
 
-  def handle({:text, text, data}, _context) do
+  def handle({:text, text, data}, context) do
+    Metrica.request(context)
     Passme.Chat.Server.input_handler(data.chat.id, text, data)
   end
 
   def handle({:command, "start", _data}, context) do
+    Metrica.request(context)
     {text, opts} = Passme.Chat.Interface.start()
     answer(context, text, opts)
   end
 
-  def handle({:command, "r_" <> record_id, data}, _ctx) do
+  def handle({:command, "r_" <> record_id, data}, context) do
+    Metrica.request(context)
     Passme.Chat.Server.show_record(data.chat.id, String.to_integer(record_id), data)
   end
 
-  def handle({:command, cmd, data}, _ctx) do
+  def handle({:command, cmd, data}, context) do
+    Metrica.request(context)
     Passme.Chat.Server.handle_command(data.chat.id, cmd, data)
   end
 end

@@ -15,14 +15,14 @@ defmodule Passme.Chat.ChatActivity do
 
   ##### Client #####
 
-  @spec request(any(), Passme.Chat.State.t()) :: :ok
-  def request(context, state) do
-    GenServer.cast(__MODULE__, {:metrics, context, state})
+  @spec request(any()) :: :ok
+  def request(context) do
+    GenServer.cast(__MODULE__, {:metrics, context})
   end
 
   ##### Server #####
 
-  def handle_cast({:metrics, context, _state}, nil) do
+  def handle_cast({:metrics, context}, nil) do
     case context do
       %{from: user, message: %{chat: chat}} ->
         if chat.id !== user.id do

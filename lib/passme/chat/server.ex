@@ -7,7 +7,6 @@ defmodule Passme.Chat.Server do
   import Logger
 
   alias Passme.Chat.Storage.Record, as: Record
-  alias Passme.Chat.ChatActivity, as: Metrica
   alias Passme.Chat.Script, as: Script
   alias Passme.Chat.State, as: State
 
@@ -179,8 +178,6 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_cast({:new_record, context}, state) do
-    Metrica.request(context, state)
-
     {
       :noreply,
       Map.put(
@@ -193,10 +190,10 @@ defmodule Passme.Chat.Server do
   end
 
   @spec handle_cast(
-          {:add_record, Passme.Chat.Storage.Record.t(), map() | nil},
-          Passme.Chat.State.t()
+          {:add_record, Record.t(), map() | nil},
+          State.t()
         ) ::
-          {:noreply, Passme.Chat.State.t(), non_neg_integer()}
+          {:noreply, State.t(), non_neg_integer()}
   def handle_cast({:add_record, record, user}, state) do
     case user do
       %{id: user_id, username: name} ->
@@ -221,17 +218,15 @@ defmodule Passme.Chat.Server do
     end
 
     new_storage =
-      Passme.Chat.State.get_storage(state)
+      State.get_storage(state)
       |> Passme.Chat.Storage.put_record(record)
 
     {:noreply, Map.put(state, :storage, new_storage), @expiry_idle_timeout}
   end
 
-  @spec handle_cast({:show_record, non_neg_integer(), map()}, Passme.Chat.State.t()) ::
-          {:noreply, Passme.Chat.State.t(), non_neg_integer()}
-  def handle_cast({:show_record, record_id, context}, state) do
-    Metrica.request(context, state)
-
+  @spec handle_cast({:show_record, non_neg_integer(), map()}, State.t()) ::
+          {:noreply, State.t(), non_neg_integer()}
+  def handle_cast({:show_record, record_id, _context}, state) do
     spawn(fn ->
       case Passme.Chat.chat_record(record_id, state.chat_id) do
         %Record{} = record ->
@@ -252,13 +247,11 @@ defmodule Passme.Chat.Server do
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  @spec handle_cast({:record_edit, atom(), non_neg_integer(), map()}, Passme.Chat.State.t()) ::
-          {:noreply, Passme.Chat.State.t(), non_neg_integer()}
+  @spec handle_cast({:record_edit, atom(), non_neg_integer(), map()}, State.t()) ::
+          {:noreply, State.t(), non_neg_integer()}
   def handle_cast({:record_edit, key, record_id, context}, state) do
     pu = context.from
     pc = context.message.chat
-
-    Metrica.request(context, state)
 
     script =
       Passme.Chat.record(record_id)
@@ -268,7 +261,7 @@ defmodule Passme.Chat.Server do
           nil
 
         record ->
-          with true <- Passme.Chat.Storage.Record.has_field?(key),
+          with true <- Record.has_field?(key),
                true <- State.user_in_chat?(record.chat_id, pu.id) do
             # Check here user can edit this record
             data =
@@ -288,7 +281,6 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_cast({:record_action, {:delete, record_id}, data}, state) do
-    Metrica.request(data, state)
     pu = data.from
 
     Passme.Chat.record(record_id)
@@ -323,14 +315,11 @@ defmodule Passme.Chat.Server do
   end
 
   # Enter if awaiter (script) is not null
-  def handle_cast({:input, _, context}, %{script: nil} = state) do
-    Metrica.request(context, state)
+  def handle_cast({:input, _, _}, %{script: nil} = state) do
     {:noreply, state}
   end
 
-  def handle_cast({:input, text, context}, %{script: script} = state) do
-    Metrica.request(context, state)
-
+  def handle_cast({:input, text, _context}, %{script: script} = state) do
     new_state =
       case Script.set_step_result(script, text) do
         {:ok, script} ->
