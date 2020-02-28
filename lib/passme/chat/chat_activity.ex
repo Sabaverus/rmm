@@ -1,8 +1,6 @@
 defmodule Passme.Chat.ChatActivity do
   @moduledoc false
 
-  alias Passme.Chat.State, as: State
-
   use GenServer
 
   def start_link(_) do
@@ -26,7 +24,7 @@ defmodule Passme.Chat.ChatActivity do
     case context do
       %{from: user, message: %{chat: chat}} ->
         if chat.id !== user.id do
-          unless State.user_in_chat?(chat.id, user.id) do
+          unless Passme.Chat.user_in_chat?(chat.id, user.id) do
             Passme.Chat.relate_user_with_chat(chat.id, user.id)
           end
         end
@@ -34,7 +32,8 @@ defmodule Passme.Chat.ChatActivity do
       %{from: _user} ->
         :ok
 
-      _ -> :ok
+      _ ->
+        :ok
     end
 
     {:noreply, nil}

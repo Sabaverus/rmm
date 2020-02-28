@@ -263,6 +263,7 @@ defmodule Passme.Chat.Server do
             _ ->
               Bot.msg(state.chat_id, "Not allowed to edit this record")
               |> Bot.private_chat_requested(pc.id, pu)
+
               nil
           end
       end

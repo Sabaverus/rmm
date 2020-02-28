@@ -20,15 +20,16 @@ defmodule Passme.Bot do
   def msg(chat_id, text) when is_bitstring(text), do: msg(chat_id, text, [])
   def msg(chat_id, {text, opts}), do: msg(chat_id, text, opts)
 
-  @spec msg(integer() | %{id: String.t() | integer()}, String.t(), Keyword.t())
-     :: {:ok, map()} |
-        {:not_in_conversation, map()} |
-        {:undefined, String.t(), map()} |
-        {:error, String.t(), map()}
+  @spec msg(integer() | %{id: String.t() | integer()}, String.t(), Keyword.t()) ::
+          {:ok, map()}
+          | {:not_in_conversation, map()}
+          | {:undefined, String.t(), map()}
+          | {:error, String.t(), map()}
   @doc """
     Send message to target chat
   """
   def msg(%{id: chat_id}, text, opts), do: msg(chat_id, text, opts)
+
   def msg(chat_id, text, opts) when is_integer(chat_id) do
     ExGram.send_message(chat_id, text, opts)
     |> process_result()
@@ -41,8 +42,10 @@ defmodule Passme.Bot do
     unless chat_id == user.id do
       msg(chat_id, Passme.Chat.Interface.not_in_conversation(user))
     end
+
     true
   end
+
   def private_chat_requested(_, _, _), do: false
 
   ########### Server ###########
@@ -51,21 +54,22 @@ defmodule Passme.Bot do
     debug("Handle message")
   end
 
-  def handle({:callback_query, %{data: "list"} = data}, context) do
-    Metrica.request(context)
+  def handle({:callback_query, %{data: "list"} = data}, _context) do
+    Metrica.request(data)
     Passme.Chat.Server.print_list(data.message.chat.id)
   end
 
-  def handle({:callback_query, %{data: "new_record"} = data}, context) do
-    Metrica.request(context)
+  def handle({:callback_query, %{data: "new_record"} = data}, _context) do
+    Metrica.request(data)
     Passme.Chat.Server.script_new_record(data.from.id, data)
   end
 
   def handle(
         {:callback_query, %{data: "record_action_" <> action} = data},
-        context
+        _context
       ) do
-    Metrica.request(context)
+    Metrica.request(data)
+
     {type, record_id} =
       case action do
         "delete_" <> record_id -> {:delete, String.to_integer(record_id)}
@@ -79,7 +83,7 @@ defmodule Passme.Bot do
         {:callback_query, %{data: "record_edit_" <> command} = data},
         context
       ) do
-    Metrica.request(context)
+    Metrica.request(data)
 
     {field, record_id} =
       case command do
@@ -112,47 +116,49 @@ defmodule Passme.Bot do
 
   def handle(
         {:callback_query, %{data: "script_" <> action} = data},
-        context
+        _context
       ) do
-    Metrica.request(context)
+    Metrica.request(data)
+
     case action do
       "step_clean" ->
-        Passme.Chat.Server.input_handler(data.from.id, nil, context)
+        Passme.Chat.Server.input_handler(data.from.id, nil, data)
 
       "abort" ->
         Passme.Chat.Server.script_abort(data.from.id)
     end
   end
 
-  def handle({:callback_query, _data}, context) do
-    Metrica.request(context)
+  def handle({:callback_query, data}, context) do
+    Metrica.request(data)
     answer(context, "Undefined query")
   end
 
-  def handle({:text, text, data}, context) do
-    Metrica.request(context)
+  def handle({:text, text, data}, _context) do
+    Metrica.request(data)
     Passme.Chat.Server.input_handler(data.chat.id, text, data)
   end
 
-  def handle({:command, "start", _data}, context) do
-    Metrica.request(context)
+  def handle({:command, "start", data}, context) do
+    Metrica.request(data)
     {text, opts} = Passme.Chat.Interface.start()
     answer(context, text, opts)
   end
 
-  def handle({:command, "r_" <> record_id, data}, context) do
-    Metrica.request(context)
+  def handle({:command, "r_" <> record_id, data}, _context) do
+    Metrica.request(data)
     Passme.Chat.Server.show_record(data.chat.id, String.to_integer(record_id), data)
   end
 
-  def handle({:command, cmd, data}, context) do
-    Metrica.request(context)
+  def handle({:command, cmd, data}, _context) do
+    Metrica.request(data)
     Passme.Chat.Server.handle_command(data.chat.id, cmd, data)
   end
 
   ########### Private ###########
 
   defp process_result({:ok, message}), do: {:ok, message}
+
   defp process_result({:error, result}) do
     result
     |> process_ex_error()
