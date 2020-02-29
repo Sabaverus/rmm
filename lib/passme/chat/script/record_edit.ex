@@ -22,6 +22,12 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
        )}
     ]
 
+  def on_start(script) do
+    {text, opts} = Passme.Chat.Interface.on_start_record_edit(script)
+    Bot.msg(script.parent_user, text, opts)
+    script
+  end
+
   def abort(%{parent_user: pu}) do
     Bot.msg(pu, "Record field edit has been cancelled")
   end
@@ -29,6 +35,15 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
   def end_script(script, state) do
     ChatServer.update_chat_record(script.parent_chat.id, script.data)
     Map.put(state, :script, nil)
+  end
+
+  def initial_data(record, key) do
+    %{
+      key: nil,
+      record_id: record.id,
+      previous: Map.get(record, key)
+    }
+    |> Map.put(:_field, key)
   end
 
   # Overrided from Passme.Chat.Script.Base module

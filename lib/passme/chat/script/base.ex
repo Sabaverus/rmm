@@ -37,6 +37,19 @@ defmodule Passme.Chat.Script.Base do
           parent_user: user,
           data: data
         }
+        |> init()
+      end
+
+      def init(script) do
+        on_start(script)
+        |> case do
+          %__MODULE__{} = script -> script
+          _ -> raise "#{__MODULE__}.on_start/1 must return instance of #{__MODULE__}"
+        end
+      end
+
+      def on_start(script) do
+        script
       end
 
       def set_step_result(%{step: {_, step}} = script, value) do
@@ -137,8 +150,6 @@ defmodule Passme.Chat.Script.Base do
         end
       end
 
-      defoverridable get_field_key: 1
-
       @spec get_step_key_value(Step.t(), atom()) :: any()
       defp get_step_key_value(step, field) do
         Map.get(step, field)
@@ -159,8 +170,10 @@ defmodule Passme.Chat.Script.Base do
 
       defp escape(value) do
         value
-        |> String.replace(~r/\*|\\|\_|\-/, ~S(\\) <> "\\0")
+        |> String.replace(~r/\*|\\|\_/, ~S(\\) <> "\\0")
       end
+
+      defoverridable get_field_key: 1, on_start: 1
     end
   end
 end

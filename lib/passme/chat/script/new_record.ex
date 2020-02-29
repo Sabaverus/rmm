@@ -11,6 +11,12 @@ defmodule Passme.Chat.Script.NewRecord do
       {:value, Step.new("Enter record value", :end)}
     ]
 
+  def on_start(script) do
+    {text, opts} = Passme.Chat.Interface.on_start_new_record(script)
+    Bot.msg(script.parent_user, text, opts)
+    script
+  end
+
   def abort(%{parent_user: pu}) do
     Bot.msg(pu, "Adding new record has been cancelled")
   end

@@ -168,4 +168,24 @@ Edit record:
       ]
     }
   end
+
+  def on_start_new_record(_script) do
+    {
+      "Want to add new record?",
+      [parse_mode: "Markdown"]
+    }
+  end
+
+  def on_start_record_edit(script) do
+    {action, text} = unless is_nil(script.data.previous) do
+      {"change", "\n\nCurrent field value:\n#{script.data.previous}"}
+    else
+      {"add", ""}
+    end
+
+    {
+      "Want to #{action} record field?#{text}",
+      [parse_mode: "Markdown"]
+    }
+  end
 end

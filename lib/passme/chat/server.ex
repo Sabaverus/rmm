@@ -6,6 +6,7 @@ defmodule Passme.Chat.Server do
 
   import Logger
 
+  alias Passme.Chat.Script.RecordFieldEdit
   alias Passme.Chat.Storage.Record
   alias Passme.Chat.Script
   alias Passme.Chat.State
@@ -107,6 +108,7 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_call(:script_abort, _from, state) do
+    Script.cleanup(state.script)
     {:reply, :ok, State.script_abort(state), @expiry_idle_timeout}
   end
 
@@ -253,12 +255,8 @@ defmodule Passme.Chat.Server do
           with true <- Record.has_field?(key),
                true <- State.user_in_chat?(record.chat_id, pu.id) do
             # Check here user can edit this record
-            data =
-              Map.put(%{}, key, nil)
-              |> Map.put(:record_id, record_id)
-              |> Map.put(:_field, key)
 
-            start_script(Passme.Chat.Script.RecordFieldEdit, pu, pc, data)
+            start_script(RecordFieldEdit, pu, pc, RecordFieldEdit.initial_data(record, key))
           else
             _ ->
               Bot.msg(state.chat_id, "Not allowed to edit this record")
@@ -344,6 +342,7 @@ defmodule Passme.Chat.Server do
 
   def handle_info(:script_input_timeout, state) do
     Bot.msg(state.chat_id, "Input timeout. Action was cancelled.")
+    Script.cleanup(state.script)
     {:noreply, Map.put(state, :script, nil)}
   end
 
