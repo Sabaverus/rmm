@@ -26,7 +26,8 @@ defmodule Passme.Chat.Script.Base do
                 timer: nil,
                 parent_chat: nil,
                 parent_user: nil,
-                data: nil
+                data: nil,
+                messages: []
 
       def new(user, chat, data \\ %{}) do
         %__MODULE__{
@@ -62,10 +63,11 @@ defmodule Passme.Chat.Script.Base do
         # If user tried to start script from group-chat, bot doesn't added to private chat
         # telegram returns error 403 "Not in conversation"
         case Bot.msg(script.parent_user, ChatInterface.script_step(step, can_be_empty)) do
-          {:ok, _} ->
+          {:ok, reply_data} ->
             script
             |> Map.put(:timer, reset_input_timer(script.timer))
             |> Map.put(:step, {key, Map.put(step, :processing, true)})
+            |> Map.put(:messages, [reply_data.message_id | script.messages])
 
           {:not_in_conversation, _} = reply ->
             info("Target user not added this bot to private chat to start script")
@@ -97,14 +99,21 @@ defmodule Passme.Chat.Script.Base do
 
       @spec get_next_step({atom(), Step.t()}) :: {atom(), Step.t()}
       defp get_next_step({_key, step}) do
-        Enum.find(unquote(steps), :end, fn {x, _} ->
+        unquote(steps)
+        |> Enum.find(:end, fn {x, _} ->
           x == step.next
         end)
       end
 
       defp finish(%{timer: timer} = script) do
+        spawn(fn ->
+          Enum.each(script.messages, fn msg_id ->
+            ExGram.delete_message(script.parent_user, msg_id)
+          end)
+        end)
         cancel_timer(timer)
         script
+        |> Map.put(:messages, [])
       end
 
       defp first_step, do: List.first(unquote(steps))
@@ -116,8 +125,8 @@ defmodule Passme.Chat.Script.Base do
         Process.send_after(self(), unquote(script_input_timeout), unquote(wait_time))
       end
 
-      defp get_field_key(%__MODULE__{step: {key, data}}) do
-        if Map.has_key?(data, :field) do
+      defp get_field_key(%__MODULE__{step: {key, data}} = script) do
+        if Map.has_key?(data, :field) and not is_nil(data.field) do
           data.field
         else
           key
