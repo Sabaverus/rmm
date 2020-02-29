@@ -89,6 +89,16 @@ defmodule Passme.Chat.Script.Base do
       def end?(%__MODULE__{step: {:end, _}}), do: true
       def end?(%__MODULE__{step: _}), do: false
 
+      def cleanup(script) do
+        spawn(fn ->
+          Enum.each(script.messages, fn msg_id ->
+            ExGram.delete_message(script.parent_user.id, msg_id)
+          end)
+        end)
+        script
+        |> Map.put(:messages, [])
+      end
+
       defp validate_value(%Step{validate: nil}, _), do: :ok
 
       defp validate_value(%Step{validate: fun}, value) when is_function(fun),
@@ -106,14 +116,8 @@ defmodule Passme.Chat.Script.Base do
       end
 
       defp finish(%{timer: timer} = script) do
-        spawn(fn ->
-          Enum.each(script.messages, fn msg_id ->
-            ExGram.delete_message(script.parent_user, msg_id)
-          end)
-        end)
         cancel_timer(timer)
         script
-        |> Map.put(:messages, [])
       end
 
       defp first_step, do: List.first(unquote(steps))

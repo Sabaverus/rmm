@@ -151,8 +151,8 @@ defmodule Passme.Chat.Server do
         case Passme.Chat.archive_record(entry) do
           {:ok, entry} ->
             # Because user can't delete entry, only set flag "archived"
-            Passme.Chat.Storage.update(storage, storage_id, entry)
             Bot.msg(state.chat_id, "Record deleted")
+            Passme.Chat.Storage.update(storage, storage_id, entry)
 
           {:error, changeset} ->
             Bot.msg(state.chat_id, "Error on deleting record")
@@ -280,14 +280,14 @@ defmodule Passme.Chat.Server do
         Bot.msg(state.chat_id, "Record doesn't exists")
 
       record ->
-        with state <- Passme.Chat.Server.get_state(record.chat_id),
-             true <- State.user_in_chat?(state, pu.id),
-             {storage_id, _} <- Passme.Chat.Storage.get_record(state.storage, record_id) do
+        with chat_state <- Passme.Chat.Server.get_state(record.chat_id),
+             true <- State.user_in_chat?(chat_state, pu.id),
+             {storage_id, _} <- Passme.Chat.Storage.get_record(chat_state.storage, record_id) do
           # Check here user can edit this record
 
           Passme.Chat.Server.archive_record(record.chat_id, storage_id)
         else
-          _ -> Bot.msg(state.chat_id, "Not allowed to edit this record")
+          _ -> Bot.msg(state.chat_id, "Not allowed to delete this record")
         end
     end
 
@@ -319,7 +319,9 @@ defmodule Passme.Chat.Server do
             |> Script.start_step()
 
           if Script.end?(script) do
-            Script.end_script(script, state)
+            script
+            |> Script.cleanup()
+            |> Script.end_script(state)
           else
             Map.put(state, :script, script)
           end

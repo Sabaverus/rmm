@@ -21,10 +21,10 @@ defmodule Passme.Chat.Script do
   def abort_wr(script), do: forward(script, :abort_wr, [script])
 
   @impl Handler
-  @spec end_script(Handler, Passme.Chat.State.t()) :: Passme.Chat.State.t()
   @doc """
   Call script callback `end_script` with given script and chat state, wich returns modified `Passme.Chat.State`
   """
+  @spec end_script(Handler, Passme.Chat.State.t()) :: Passme.Chat.State.t()
   def end_script(script, state), do: forward(state.script, :end_script, [script, state])
 
   @doc """
@@ -33,6 +33,12 @@ defmodule Passme.Chat.Script do
   """
   @spec end?(Handler) :: boolean()
   def end?(script), do: forward(script, :end?, [script])
+
+  @doc """
+  Deleting all steps - messages for chat where is given chat is running
+  """
+  @spec cleanup(Handler) :: Hangler
+  def cleanup(script), do: forward(script, :cleanup, [script])
 
   defp forward(script, fun, args) do
     apply(script.module, fun, args)
