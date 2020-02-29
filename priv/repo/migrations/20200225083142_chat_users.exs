@@ -5,7 +5,7 @@ defmodule Passme.Repo.Migrations.ChatUsers do
     create_if_not_exists table(:chat_users) do
       add :chat_id, :bigint
       add :user_id, :bigint
-      add :removed, :boolean, default: true
+      add :removed, :boolean, default: false
 
       timestamps()
     end
