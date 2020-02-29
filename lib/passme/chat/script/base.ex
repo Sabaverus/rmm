@@ -53,32 +53,25 @@ defmodule Passme.Chat.Script.Base do
         end
       end
 
-      def start_step(%__MODULE__{step: :end} = script), do: {:end, finish(script)}
-      def start_step(%__MODULE__{step: {:end, _}} = script), do: {:end, finish(script)}
-      def start_step(%__MODULE__{step: {_, %{processing: true}}} = script), do: {:error, script}
+      def start_step(%__MODULE__{step: :end} = script), do: finish(script)
+      def start_step(%__MODULE__{step: {:end, _}} = script), do: finish(script)
+      def start_step(%__MODULE__{step: {_, %{processing: true}}} = script), do: script
 
       def start_step(%__MODULE__{step: {key, step}} = script) do
-        # If user tried to start script from group-chat, bot doesn't added to user private chat
-        # telegram returns error
-        case step_message(script) do
-          {:ok, _} ->
-            {
-              :ok,
-              script
-              |> Map.put(:timer, reset_input_timer(script.timer))
-              |> Map.put(:step, {key, Map.put(step, :processing, true)})
-            }
-
-          {:not_in_conversation, _} = tup ->
-            info("Target user not added this bot to private chat to start script")
-            Bot.private_chat_requested(tup, script.parent_chat.id, script.parent_user)
-            {:ok, script}
-        end
-      end
-
-      defp step_message(%__MODULE__{step: {_, step}} = script) do
         can_be_empty = get_step_key_value(step, :can_be_empty, get_field_key(script))
-        Bot.msg(script.parent_user, ChatInterface.script_step(script, can_be_empty))
+        # If user tried to start script from group-chat, bot doesn't added to private chat
+        # telegram returns error 403 "Not in conversation"
+        case Bot.msg(script.parent_user, ChatInterface.script_step(step, can_be_empty)) do
+          {:ok, _} ->
+            script
+            |> Map.put(:timer, reset_input_timer(script.timer))
+            |> Map.put(:step, {key, Map.put(step, :processing, true)})
+
+          {:not_in_conversation, _} = reply ->
+            info("Target user not added this bot to private chat to start script")
+            Bot.private_chat_requested(reply, script.parent_chat.id, script.parent_user)
+            script
+        end
       end
 
       def next_step(%{step: step} = script) do
@@ -89,6 +82,10 @@ defmodule Passme.Chat.Script.Base do
         cancel_timer(timer)
         abort(script)
       end
+
+      def end?(%__MODULE__{step: :end}), do: true
+      def end?(%__MODULE__{step: {:end, _}}), do: true
+      def end?(%__MODULE__{step: _}), do: false
 
       defp validate_value(%Step{validate: nil}, _), do: :ok
 

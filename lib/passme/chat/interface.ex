@@ -135,9 +135,8 @@ Edit record:
     }
   end
 
-  def script_step(%{step: step} = _script, optional \\ false) do
-    {_key, data} = step
-
+  @spec script_step(Passme.Chat.Script.Step, boolean()) :: {binary(), Keyword.t()}
+  def script_step(step, optional \\ false) do
     keyboard = [
       %ExGram.Model.InlineKeyboardButton{
         text: "Cancel script",
@@ -158,7 +157,7 @@ Edit record:
       end
 
     {
-      data.text,
+      step.text,
       [
         parse_mode: "Markdown",
         reply_markup: %ExGram.Model.InlineKeyboardMarkup{

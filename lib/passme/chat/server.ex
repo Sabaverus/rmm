@@ -313,18 +313,15 @@ defmodule Passme.Chat.Server do
     new_state =
       case Script.set_step_result(script, text) do
         {:ok, script} ->
-          {status, script} =
+          script =
             script
             |> Script.next_step()
             |> Script.start_step()
 
-          if status == :end do
-            state
-            |> Map.put(:script, script)
-            |> Script.end_script()
+          if Script.end?(script) do
+            Script.end_script(script, state)
           else
-            state
-            |> Map.put(:script, script)
+            Map.put(state, :script, script)
           end
 
         {:error, message} ->
@@ -357,15 +354,13 @@ defmodule Passme.Chat.Server do
 
   @spec start_script(Passme.Chat.Script.Handler, map(), map()) :: Script.t()
   def start_script(module, user, chat) do
-    script = apply(module, :new, [user, chat])
-    {:ok, script} = Script.start_step(script)
-    script
+    apply(module, :new, [user, chat])
+    |> Script.start_step()
   end
 
   @spec start_script(Passme.Chat.Script.Handler, map(), map(), map()) :: Script.t()
   def start_script(module, user, chat, struct) do
-    script = apply(module, :new, [user, chat, struct])
-    {:ok, script} = Script.start_step(script)
-    script
+    apply(module, :new, [user, chat, struct])
+    |> Script.start_step()
   end
 end

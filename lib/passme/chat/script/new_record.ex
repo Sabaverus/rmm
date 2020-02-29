@@ -15,25 +15,25 @@ defmodule Passme.Chat.Script.NewRecord do
     Bot.msg(pu, "Adding new record has been cancelled")
   end
 
-  def end_script(state) do
+  def end_script(script, state) do
     new_storage =
-      state.script.data
-      |> Map.put(:author, state.script.parent_user.id)
-      |> Map.put(:chat_id, state.script.parent_chat.id)
+      script.data
+      |> Map.put(:author, script.parent_user.id)
+      |> Map.put(:chat_id, script.parent_chat.id)
       |> Passme.Chat.create_chat_record()
       |> case do
         {:ok, entry} ->
           # Add record to chat where script is started
           ChatServer.add_record_to_chat(
-            state.script.parent_chat.id,
+            script.parent_chat.id,
             entry,
-            state.script.parent_user
+            script.parent_user
           )
 
           state.storage
 
         {:error, _changeset} ->
-          Bot.msg(state.script.parent_user, "Error while adding new record")
+          Bot.msg(script.parent_user, "Error while adding new record")
 
           state.storage
       end

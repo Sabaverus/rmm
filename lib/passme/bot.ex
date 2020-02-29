@@ -38,15 +38,15 @@ defmodule Passme.Bot do
   @doc """
   Send message with information "bot must be added in private chat" if bot not added to private chat
   """
-  def private_chat_requested({:not_in_conversation, _}, chat_id, user) do
+  def private_chat_requested({:not_in_conversation, _} = reply, chat_id, user) do
     unless chat_id == user.id do
       msg(chat_id, Passme.Chat.Interface.not_in_conversation(user))
     end
 
-    true
+    reply
   end
 
-  def private_chat_requested(_, _, _), do: false
+  def private_chat_requested(reply, _, _), do: reply
 
   ########### Server ###########
 
