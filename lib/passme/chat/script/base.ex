@@ -159,7 +159,7 @@ defmodule Passme.Chat.Script.Base do
 
       defp escape(value) do
         value
-        |> String.replace(~r/(\*|\\|\_|\-)/, "\\\\" <> "\\1")
+        |> String.replace(~r/\*|\\|\_|\-/, ~S(\\) <> "\\0")
       end
     end
   end

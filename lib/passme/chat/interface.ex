@@ -83,7 +83,7 @@ Edit record:
       |> Enum.reduce("", fn
         {_id, v}, acc ->
           {link, _} = record_link(v)
-          acc <> "\n📋 Key: #{v.key}\n`Full record =>` #{link}\n"
+          acc <> "\n📋 Name: #{v.name}\n`Full record =>` #{link}\n"
       end)
       |> case do
         "" -> "List is empty"
