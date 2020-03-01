@@ -16,6 +16,13 @@ defmodule Passme.Chat do
     |> DB.get(record_id)
   end
 
+  def chat_record_not_archived(record_id, chat_id) do
+    Record
+    |> Record.chat(chat_id)
+    |> Record.archived(false)
+    |> DB.get(record_id)
+  end
+
   def record(record_id) do
     DB.get(Record, record_id)
   end
@@ -60,7 +67,8 @@ defmodule Passme.Chat do
     %Passme.Chat.Models.ChatUsers{}
     |> Passme.Chat.Models.ChatUsers.changeset(%{
       chat_id: chat_id,
-      user_id: user_id
+      user_id: user_id,
+      removed: false
     })
     |> DB.insert()
   end

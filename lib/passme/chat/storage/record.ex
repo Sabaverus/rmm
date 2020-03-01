@@ -40,6 +40,10 @@ defmodule Passme.Chat.Storage.Record do
     where(query, [record], record.chat_id == ^chat_id)
   end
 
+  def archived(query, bool) do
+    where(query, [record], record.archived == ^bool)
+  end
+
   def map(%Passme.Chat.Storage.Record{} = record) do
     Map.from_struct(record)
   end

@@ -18,6 +18,7 @@ defmodule Passme.Chat.Server do
   def init(chat_id) do
     storage =
       Passme.Chat.chat_records(chat_id)
+      |> IO.inspect()
       |> Passme.Chat.Storage.new()
 
     {:ok, State.new(chat_id, storage), @expiry_idle_timeout}
@@ -223,7 +224,7 @@ defmodule Passme.Chat.Server do
           {:noreply, State.t(), non_neg_integer()}
   def handle_cast({:show_record, record_id, _context}, state) do
     spawn(fn ->
-      case Passme.Chat.chat_record(record_id, state.chat_id) do
+      case Passme.Chat.chat_record_not_archived(record_id, state.chat_id) do
         %Record{} = record ->
           {text, opts} = Passme.Chat.Interface.record(record)
           Bot.msg(state.chat_id, text, opts)
@@ -249,10 +250,10 @@ defmodule Passme.Chat.Server do
     pc = context.message.chat
 
     script =
-      Passme.Chat.record(record_id)
+      Passme.Chat.chat_record_not_archived(pc.id, record_id)
       |> case do
         nil ->
-          Bot.msg(state.chat_id, "Record doesn't exists")
+          Bot.msg(pc.id, "Record doesn't exists")
           nil
 
         record ->
@@ -278,13 +279,14 @@ defmodule Passme.Chat.Server do
     {:noreply, Map.put(state, :script, script), @expiry_idle_timeout}
   end
 
-  def handle_cast({:record_action, {:delete, record_id}, data}, state) do
-    pu = data.from
+  def handle_cast({:record_action, {:delete, record_id}, context}, state) do
+    pu = context.from
+    pc = context.message.chat
 
-    Passme.Chat.record(record_id)
+    Passme.Chat.chat_record_not_archived(record_id, pc.id)
     |> case do
       nil ->
-        Bot.msg(state.chat_id, "Record doesn't exists")
+        Bot.msg(pc.id, "Record doesn't exists")
 
       record ->
         with chat_state <- Passme.Chat.Server.get_state(record.chat_id),

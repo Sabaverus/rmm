@@ -78,7 +78,7 @@ Edit record:
     text =
       records
       |> Enum.filter(fn
-        {_id, v} -> is_nil(v.archived)
+        {_id, v} -> not v.archived
       end)
       |> Enum.reduce("", fn
         {_id, v}, acc ->

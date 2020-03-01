@@ -40,7 +40,6 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
 
   def initial_data(record, key) do
     %{
-      key: nil,
       record_id: record.id,
       previous: Map.get(record, key)
     }
