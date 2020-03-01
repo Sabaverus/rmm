@@ -2,6 +2,7 @@
 /_build/
 
 /.elixir_ls/
+/.vscode/
 /.history/
 /config/dev.exs
 
