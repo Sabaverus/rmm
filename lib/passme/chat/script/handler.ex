@@ -7,5 +7,5 @@ defmodule Passme.Chat.Script.Handler do
 
   @callback abort_wr(any()) :: :ok
 
-  @callback end_script(Passme.Chat.Script.Handler.t(), Passme.Chat.State.t()) :: Passme.Chat.State.t()
+  @callback end_script(Passme.Chat.Script.Handler.t()) :: {:ok, Passme.Chat.Script.Handler.t()}
 end

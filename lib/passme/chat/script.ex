@@ -5,27 +5,33 @@ defmodule Passme.Chat.Script do
 
   @behaviour Handler
 
-  @impl Handler
+  @doc """
+  Switches step on script to next in steps list
+  """
   def next_step(script), do: forward(script, :next_step, [script])
 
-  @impl Handler
+  @doc """
+  Invokes current step on given script
+  """
   def start_step(script), do: forward(script, :start_step, [script])
 
-  @impl Handler
+  @doc """
+  Applies given value to current step on script
+  """
+  @spec set_step_result(Handler, binary() | integer()) :: {:ok, Handler} | {:error, binary()}
   def set_step_result(script, value), do: forward(script, :set_step_result, [script, value])
 
-  @impl Handler
   @doc """
   Stops all inner processes of given script
   """
+  @spec abort_wr(Handler) :: Handler
   def abort_wr(script), do: forward(script, :abort_wr, [script])
 
-  @impl Handler
   @doc """
   Call script callback `end_script` with given script and chat state, wich returns modified `Passme.Chat.State`
   """
-  @spec end_script(Handler, Passme.Chat.State.t()) :: Passme.Chat.State.t()
-  def end_script(script, state), do: forward(state.script, :end_script, [script, state])
+  @spec end_script(Handler) :: {:ok, Handler}
+  def end_script(script), do: forward(script, :end_script, [script])
 
   @doc """
   Return `true` if last step on given script has key `:end` or `nil`.
@@ -40,7 +46,23 @@ defmodule Passme.Chat.Script do
   @spec cleanup(Handler) :: Hangler
   def cleanup(script), do: forward(script, :cleanup, [script])
 
-  defp forward(script, fun, args) do
-    apply(script.module, fun, args)
+  @spec start_script(Passme.Chat.Script.Handler, map(), map()) :: Script.t()
+  def start_script(module, user, chat) do
+    forward(module, :new, [user, chat])
+    |> start_step()
+  end
+
+  @spec start_script(Passme.Chat.Script.Handler, map(), map(), map()) :: Script.t()
+  def start_script(module, user, chat, struct) do
+    forward(module, :new, [user, chat, struct])
+    |> start_step()
+  end
+
+  defp forward(%{module: module}, fun, args) do
+    forward(module, fun, args)
+  end
+
+  defp forward(module, fun, args) do
+    apply(module, fun, args)
   end
 end

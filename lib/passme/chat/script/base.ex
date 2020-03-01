@@ -86,6 +86,9 @@ defmodule Passme.Chat.Script.Base do
             info("Target user not added this bot to private chat to start script")
             Bot.private_chat_requested(reply, script.parent_chat.id, script.parent_user)
             script
+          _ ->
+            info("Unexpected reply")
+            script
         end
       end
 

@@ -28,13 +28,14 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
     script
   end
 
-  def abort(%{parent_user: pu}) do
+  def abort(%{parent_user: pu} = script) do
     Bot.msg(pu, "Record field edit has been cancelled")
+    script
   end
 
-  def end_script(script, state) do
+  def end_script(script) do
     ChatServer.update_chat_record(script.parent_chat.id, script.data)
-    Map.put(state, :script, nil)
+    script
   end
 
   def initial_data(record, key) do

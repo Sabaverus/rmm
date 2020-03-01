@@ -25,7 +25,14 @@ defmodule Passme.Chat.State do
 
   def script_abort(state) do
     Script.abort_wr(state.script)
-    Map.put(state, :script, nil)
+    script_flush(state)
+  end
+
+  def script_flush(state) do
+    state.script
+    |> Script.cleanup()
+    state
+    |> Map.put(:script, nil)
   end
 
   @spec get_storage(any()) :: Passme.Chat.Storage.t()

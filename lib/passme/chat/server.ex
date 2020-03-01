@@ -108,7 +108,6 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_call(:script_abort, _from, state) do
-    Script.cleanup(state.script)
     {:reply, :ok, State.script_abort(state), @expiry_idle_timeout}
   end
 
@@ -174,7 +173,7 @@ defmodule Passme.Chat.Server do
       Map.put(
         state,
         :script,
-        start_script(Passme.Chat.Script.NewRecord, context.from, context.message.chat, %Record{})
+        Script.start_script(Passme.Chat.Script.NewRecord, context.from, context.message.chat, %Record{})
       ),
       @expiry_idle_timeout
     }
@@ -256,7 +255,7 @@ defmodule Passme.Chat.Server do
                true <- State.user_in_chat?(record.chat_id, pu.id) do
             # Check here user can edit this record
 
-            start_script(RecordFieldEdit, pu, pc, RecordFieldEdit.initial_data(record, key))
+            Script.start_script(RecordFieldEdit, pu, pc, RecordFieldEdit.initial_data(record, key))
           else
             _ ->
               Bot.msg(state.chat_id, "Not allowed to edit this record")
@@ -318,8 +317,9 @@ defmodule Passme.Chat.Server do
 
           if Script.end?(script) do
             script
-            |> Script.cleanup()
-            |> Script.end_script(state)
+            |> Script.end_script()
+
+            State.script_flush(state)
           else
             Map.put(state, :script, script)
           end
@@ -342,8 +342,7 @@ defmodule Passme.Chat.Server do
 
   def handle_info(:script_input_timeout, state) do
     Bot.msg(state.chat_id, "Input timeout. Action was cancelled.")
-    Script.cleanup(state.script)
-    {:noreply, Map.put(state, :script, nil)}
+    {:noreply, State.script_flush(state)}
   end
 
   #######
@@ -351,17 +350,5 @@ defmodule Passme.Chat.Server do
   @spec get_chat_process(integer()) :: pid()
   defp get_chat_process(chat_id) do
     Passme.Chat.Supervisor.get_chat_process(chat_id)
-  end
-
-  @spec start_script(Passme.Chat.Script.Handler, map(), map()) :: Script.t()
-  def start_script(module, user, chat) do
-    apply(module, :new, [user, chat])
-    |> Script.start_step()
-  end
-
-  @spec start_script(Passme.Chat.Script.Handler, map(), map(), map()) :: Script.t()
-  def start_script(module, user, chat, struct) do
-    apply(module, :new, [user, chat, struct])
-    |> Script.start_step()
   end
 end
