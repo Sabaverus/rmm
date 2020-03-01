@@ -99,23 +99,22 @@ Edit record:
   def start() do
     {
       "
-Бот умеет хранить записи добавленные пользователями, при этом обращаясь к записи - бот
-опрашивает создателя записи можно ли ее показать запросившему пользователю.
+This bot can store records wich can be added by chat members.
 
-Список доступных комманд:",
+List of commands:",
       [
         parse_mode: "Markdown",
         reply_markup: %ExGram.Model.InlineKeyboardMarkup{
           inline_keyboard: [
             [
               %ExGram.Model.InlineKeyboardButton{
-                text: "🗄 Список записей",
+                text: "🗄 List of records",
                 callback_data: "list"
               }
             ],
             [
               %ExGram.Model.InlineKeyboardButton{
-                text: "📝 Добавить новую запись",
+                text: "📝 Add new record",
                 callback_data: "new_record"
               }
             ]
@@ -128,9 +127,7 @@ Edit record:
   @spec not_in_conversation(map()) :: {String.t(), Keyword.t()}
   def not_in_conversation(%{username: username}) do
     {
-      "@#{username}
-Для работы с записями добавьте бота в приватный чат
-      ",
+      "@#{username}\nThis bot reque to be in private chat to work with records.",
       []
     }
   end
