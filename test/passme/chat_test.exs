@@ -5,7 +5,6 @@ defmodule Passme.ChatTest do
   alias Passme.ChatTest
 
   describe "records" do
-
     @valid_record %{
       name: "some title",
       value: "record value"
@@ -52,19 +51,15 @@ defmodule Passme.ChatTest do
     end
 
     test "user_relate_to_chat" do
-
     end
 
     test "related_user_must_be_in_chat" do
-
     end
 
     test "chat_users" do
-
     end
 
     test "added_records_must_be_linked_to_chat" do
-
     end
   end
 end

@@ -31,6 +31,7 @@ defmodule Passme.Chat.State do
   def script_flush(state) do
     state.script
     |> Script.cleanup()
+
     state
     |> Map.put(:script, nil)
   end

@@ -86,6 +86,7 @@ defmodule Passme.Chat.Script.Base do
             info("Target user not added this bot to private chat to start script")
             Bot.private_chat_requested(reply, script.parent_chat.id, script.parent_user)
             script
+
           _ ->
             info("Unexpected reply")
             script
@@ -111,6 +112,7 @@ defmodule Passme.Chat.Script.Base do
             ExGram.delete_message(script.parent_user.id, msg_id)
           end)
         end)
+
         script
         |> Map.put(:messages, [])
       end

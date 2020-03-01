@@ -18,17 +18,18 @@ defmodule Passme.ScriptTest do
   @step_two Step.new("Step two text", :end, field: :some_field)
 
   describe "scripts" do
-
     test "If script at end they must know it" do
-      assert true == script_test()
-      |> Script.next_step()
-      |> Script.next_step()
-      |> Script.end?
+      assert true ==
+               script_test()
+               |> Script.next_step()
+               |> Script.next_step()
+               |> Script.end?()
     end
 
     test "check_next_step" do
-      script = script_test()
-      |> Script.next_step()
+      script =
+        script_test()
+        |> Script.next_step()
 
       {step_key, step} = script.step
       assert step_key == :step_two
@@ -72,10 +73,7 @@ defmodule Passme.ScriptTest do
 
       assert false == Process.read_timer(script.timer)
     end
-
   end
-
-
 
   def test_state(script) do
     State.new(
@@ -111,7 +109,6 @@ defmodule Passme.ScriptTest do
 end
 
 defmodule Passme.Test.ChatScriptCorrect do
-
   alias Passme.Chat.Script.Step
 
   use Passme.Chat.Script.Base,

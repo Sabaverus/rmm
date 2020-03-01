@@ -173,7 +173,12 @@ defmodule Passme.Chat.Server do
       Map.put(
         state,
         :script,
-        Script.start_script(Passme.Chat.Script.NewRecord, context.from, context.message.chat, %Record{})
+        Script.start_script(
+          Passme.Chat.Script.NewRecord,
+          context.from,
+          context.message.chat,
+          %Record{}
+        )
       ),
       @expiry_idle_timeout
     }
@@ -255,7 +260,12 @@ defmodule Passme.Chat.Server do
                true <- State.user_in_chat?(record.chat_id, pu.id) do
             # Check here user can edit this record
 
-            Script.start_script(RecordFieldEdit, pu, pc, RecordFieldEdit.initial_data(record, key))
+            Script.start_script(
+              RecordFieldEdit,
+              pu,
+              pc,
+              RecordFieldEdit.initial_data(record, key)
+            )
           else
             _ ->
               Bot.msg(state.chat_id, "Not allowed to edit this record")
