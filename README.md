@@ -28,10 +28,15 @@ To run this bot in development stage
 
 Roadmap:
 
- - [ ] Fill with tests
- - [ ] Bot-Script messages cleanup
+ - [x] Adding new records
+ - [x] Edit records
+ - [x] Delete records
+ - [x] Cleanup step-messages
+ - [ ] Fill with tests (~60% done) 
  - [ ] "Closed" records, where need request accept to show record from author or chat-admin
  - [ ] Self-deleting messages after show
  - [ ] Fill with tests again
- - [ ] Add MakeFile
- - [ ] Prepare to run in production
+ - [ ] Make web-view of chat records
+ - [ ] Authorization to web-view chat records through telegram login
+ - [ ] CrUD actions on web-records
+ - [ ] Fill with tests
