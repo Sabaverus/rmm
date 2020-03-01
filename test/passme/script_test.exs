@@ -5,7 +5,6 @@ defmodule Passme.ScriptTest do
   alias Passme.Chat.Script
   alias Passme.Chat.Script.Step
   alias Passme.Chat.Storage
-  alias Passme.Chat.Script.RecordFieldEdit
 
   @chat %{
     id: 1
@@ -73,14 +72,12 @@ defmodule Passme.ScriptTest do
 
       assert false == Process.read_timer(script.timer)
     end
-  end
 
-  def test_state(script) do
-    State.new(
-      @chat.id,
-      Storage,
-      script
-    )
+    test "Script on timeout must send :script_input_timeout to script creator" do
+      script = script_test_timeout()
+      assert_receive :script_input_timeout
+      assert false == Process.read_timer(script.timer)
+    end
   end
 
   def script_test() do
@@ -90,21 +87,11 @@ defmodule Passme.ScriptTest do
     })
   end
 
-  def script_new_record() do
-    Script.start_script(
-      Passme.Chat.Script.NewRecord,
-      @user,
-      @chat
-    )
-  end
-
-  def script_edit_record(record, key) do
-    Script.start_script(
-      RecordFieldEdit,
-      @user,
-      @chat,
-      RecordFieldEdit.initial_data(record, key)
-    )
+  def script_test_timeout() do
+    Script.start_script(Passme.Test.ChatScriptInputTimeout, @user, @chat, %{
+      step_one: nil,
+      some_field: "some value"
+    })
   end
 end
 
@@ -116,6 +103,21 @@ defmodule Passme.Test.ChatScriptCorrect do
       {:step_one, Step.new("Step one text", :step_two)},
       {:step_two, Step.new("Step two text", :end, field: :some_field)}
     ]
+
+  def abort(script), do: script
+
+  def end_script(script), do: script
+end
+
+defmodule Passme.Test.ChatScriptInputTimeout do
+  alias Passme.Chat.Script.Step
+
+  use Passme.Chat.Script.Base,
+    steps: [
+      {:step_one, Step.new("Step one text", :step_two)},
+      {:step_two, Step.new("Step two text", :end, field: :some_field)}
+    ],
+    input_timeout: :timer.seconds(0)
 
   def abort(script), do: script
 

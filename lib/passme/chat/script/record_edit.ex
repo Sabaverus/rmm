@@ -51,7 +51,7 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
   # making step key :field dynamic, if field-key will be added in script data as :_field before
   # initialize script
   @spec get_field_key(Passme.Chat.Script.Base.t()) :: atom()
-  defp get_field_key(%__MODULE__{data: %{_field: field}}) do
+  def get_field_key(%__MODULE__{data: %{_field: field}}) do
     field
   end
 

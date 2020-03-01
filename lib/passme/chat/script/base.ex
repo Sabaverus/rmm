@@ -8,7 +8,11 @@ defmodule Passme.Chat.Script.Base do
     alias Passme.Chat.Script.Step
     alias Passme.Bot
 
-    wait_time = :timer.seconds(30)
+    wait_time =
+      case Keyword.fetch(ops, :input_timeout) do
+        {:ok, timer} -> timer
+        _ -> :timer.seconds(30)
+      end
 
     script_input_timeout = :script_input_timeout
 
@@ -147,7 +151,7 @@ defmodule Passme.Chat.Script.Base do
         Process.send_after(self(), unquote(script_input_timeout), unquote(wait_time))
       end
 
-      defp get_field_key(%__MODULE__{step: {key, data}} = script) do
+      def get_field_key(%__MODULE__{step: {key, data}} = script) do
         if Map.has_key?(data, :field) and not is_nil(data.field) do
           data.field
         else
