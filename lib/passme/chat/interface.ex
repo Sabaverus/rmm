@@ -77,9 +77,6 @@ Edit record:
   def list(records) do
     text =
       records
-      |> Enum.filter(fn
-        {_id, v} -> not v.archived
-      end)
       |> Enum.reduce("", fn
         {_id, v}, acc ->
           {link, _} = record_link(v)
@@ -178,6 +175,7 @@ List of commands:",
       case script.data.previous do
         nil ->
           {"add", ""}
+
         _ ->
           {"change", "\n\nCurrent field value:\n#{script.data.previous}"}
       end

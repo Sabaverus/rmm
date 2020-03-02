@@ -7,7 +7,7 @@ defmodule Passme.ScriptNewRecordTest do
   alias Passme.Chat.Script.NewRecord
 
   @chat %{
-    id: 1
+    id: :rand.uniform(1_000_000_000)
   }
   @user %{
     id: 42,
@@ -36,14 +36,12 @@ defmodule Passme.ScriptNewRecordTest do
       state = Passme.Chat.Server.get_state(@chat.id)
       storage = State.get_storage(state)
 
-      record =
-        Storage.entries(storage)
-        |> Map.get(0)
-
-      refute is_nil(record)
-      refute is_nil(record.id)
-      assert record.name == @record.name
-      assert record.value == @record.value
+      assert Storage.entries(storage)
+             |> Enum.any?(fn {_, x} ->
+               x.name == @record.name and
+                 x.value == @record.value and
+                 not is_nil(x.id)
+             end)
     end
   end
 

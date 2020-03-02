@@ -60,6 +60,10 @@ defmodule Passme.Chat.Storage.Record do
     raise "#{__MODULE__}.has_field accept as parameter only atom type"
   end
 
+  def archived?(record) do
+    Map.get(record, :archived)
+  end
+
   @spec field_can_be_empty?(atom()) :: boolean()
   def field_can_be_empty?(field) do
     Enum.find(required_fields(), nil, fn required ->

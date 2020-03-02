@@ -7,6 +7,7 @@ defmodule Passme.Chat.Server do
   import Logger
 
   alias Passme.Chat.Script.RecordFieldEdit
+  alias Passme.Chat.Storage
   alias Passme.Chat.Storage.Record
   alias Passme.Chat.Script
   alias Passme.Chat.State
@@ -91,9 +92,9 @@ defmodule Passme.Chat.Server do
     |> GenServer.cast({:add_record, record, user})
   end
 
-  def update_chat_record(chat_id, fields) do
+  def update_chat_record(chat_id, record_id, fields) do
     get_chat_process(chat_id)
-    |> GenServer.cast({:update_record, fields})
+    |> GenServer.cast({:update_record, record_id, fields})
   end
 
   def archive_record(chat_id, storage_id) do
@@ -115,38 +116,45 @@ defmodule Passme.Chat.Server do
     {:reply, state, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:update_record, fields}, state) do
-    new_entries =
-      state.storage
-      |> Passme.Chat.Storage.get_record(fields.record_id)
+  def handle_cast({:update_record, record_id, fields}, state) do
+    storage =
+      state
+      |> State.get_storage()
+      |> Storage.get_record(record_id)
       |> case do
-        {storage_id, storage_record} ->
-          storage_record
+        {entry_id, record} ->
+          record
           |> Passme.Chat.update_record(fields)
           |> case do
             {:ok, record} ->
               {link, opts} = Passme.Chat.Interface.record_link(record)
               Bot.msg(state.chat_id, "Record #{link} was updated", opts)
 
-              Map.put(state.storage.entries, storage_id, record)
+              state
+              |> State.get_storage()
+              |> Storage.update(entry_id, record)
 
             {:error, _changeset} ->
               Bot.msg(state.chat_id, "Error on updating record")
-              state.storage.entries
+              State.get_storage(state)
           end
 
         nil ->
           Bot.msg(state.chat_id, "Record not found in this chat")
+          State.get_storage(state)
       end
 
-    new_storage = Map.put(state.storage, :entries, new_entries)
-    {:noreply, Map.put(state, :storage, new_storage), @expiry_idle_timeout}
+    state = Map.put(state, :storage, storage)
+
+    {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:archive_record, storage_id}, state) do
-    %{storage: storage} = state
+  def handle_cast({:archive_record, record_id}, state) do
+    storage = State.get_storage(state)
 
-    entry = Map.get(storage.entries, storage_id)
+    {storage_id, entry} =
+      storage
+      |> Storage.get_record(record_id)
 
     new_storage =
       if entry do
@@ -162,6 +170,7 @@ defmodule Passme.Chat.Server do
             storage
         end
       else
+        raise "Record doesn't exists in chat storage!"
         storage
       end
 
@@ -197,6 +206,7 @@ defmodule Passme.Chat.Server do
       |> case do
         {:ok, entry} ->
           send_record_added(user, entry, state.chat_id)
+
           State.get_storage(state)
           |> Passme.Chat.Storage.put_record(entry)
 
@@ -279,10 +289,11 @@ defmodule Passme.Chat.Server do
       record ->
         with chat_state <- Passme.Chat.Server.get_state(record.chat_id),
              true <- State.user_in_chat?(chat_state, pu.id),
-             {storage_id, _} <- Passme.Chat.Storage.get_record(chat_state.storage, record_id) do
+             {_, record} <-
+               Passme.Chat.Storage.get_record(State.get_storage(chat_state), record_id) do
           # Check here user can edit this record
 
-          Passme.Chat.Server.archive_record(record.chat_id, storage_id)
+          Passme.Chat.Server.archive_record(record.chat_id, record.id)
         else
           _ -> Bot.msg(state.chat_id, "Not allowed to delete this record")
         end
@@ -297,7 +308,13 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_cast(:list, state) do
-    Bot.msg(state.chat_id, Passme.Chat.Interface.list(state.storage.entries))
+    message =
+      state
+      |> State.get_storage()
+      |> Storage.active_entries()
+      |> Passme.Chat.Interface.list()
+
+    Bot.msg(state.chat_id, message)
     {:noreply, state, @expiry_idle_timeout}
   end
 
@@ -353,7 +370,6 @@ defmodule Passme.Chat.Server do
   end
 
   defp send_record_added(user, entry, chat_id) do
-
     if user do
       %{id: user_id, username: name} = user
       {text, opts} = Passme.Chat.Interface.record_link(entry)

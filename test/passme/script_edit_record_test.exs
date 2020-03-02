@@ -10,7 +10,7 @@ defmodule Passme.EditRecordTest do
     value: "some value"
   }
   @chat %{
-    id: 1
+    id: :rand.uniform(1_000_000_000)
   }
   @user %{
     id: 42,
@@ -34,14 +34,19 @@ defmodule Passme.EditRecordTest do
       assert Map.get(script.data, :name) == "new name"
     end
 
-    test "end_script/1 must send request to update record" do
-      {:ok, record} = Chat.create_chat_record(@record)
+    test "end_script/1 must send request to chat server where is record updated" do
+      Passme.Chat.Server.add_record_to_chat(@chat.id, @record)
+
+      record =
+        @chat.id
+        |> Passme.Chat.Server.get_state()
+        |> Passme.Chat.State.get_storage()
+        |> Passme.Chat.Storage.entries_list()
+        |> List.first()
+
+      refute is_nil(record)
 
       script = script_edit_record(record, :name)
-
-      {:ok, pid} = Passme.Chat.Server.start_link(@chat.id)
-
-      :erlang.trace(pid, true, [:receive])
 
       {:ok, script} = Script.set_step_result(script, "new name")
 
@@ -49,8 +54,15 @@ defmodule Passme.EditRecordTest do
       |> Script.next_step()
       |> Script.end_script()
 
-      assert_receive {:trace, ^pid, :receive, {_, {:update_record, fields}}}
-      assert Map.get(fields, :name) == "new name"
+      {_, updated} =
+        @chat.id
+        |> Passme.Chat.Server.get_state()
+        |> Passme.Chat.State.get_storage()
+        |> Passme.Chat.Storage.get_record(record.id)
+
+      refute is_nil(updated)
+      assert Map.get(updated, :name) == "new name"
+      assert Map.get(updated, :value) == @record.value
     end
 
     test "initial_data/2 must store edited key in record to script.data[:_field]" do
