@@ -84,7 +84,7 @@ Edit record:
       end)
       |> case do
         "" -> "List is empty"
-        string -> "List of entries:" <> string
+        string -> "List of records:" <> string
       end
 
     {
