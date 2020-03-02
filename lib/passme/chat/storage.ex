@@ -14,8 +14,7 @@ defmodule Passme.Chat.Storage do
 
   @spec put_record(__MODULE__.t(), Record.t()) :: __MODULE__.t()
   def put_record(storage, record) do
-    entry = Map.put(record, :storage_id, storage.auto_id)
-    entries = Map.put(storage.entries, storage.auto_id, entry)
+    entries = Map.put(storage.entries, storage.auto_id, record)
 
     %__MODULE__{
       auto_id: storage.auto_id + 1,
