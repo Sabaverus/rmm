@@ -35,4 +35,8 @@ defmodule Passme.Chat.Storage do
     new_entries = Map.put(entries, entry_id, entry)
     Map.put(storage, :entries, new_entries)
   end
+
+  def entries(%__MODULE__{} = storage) do
+    Map.get(storage, :entries)
+  end
 end

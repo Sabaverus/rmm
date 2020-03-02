@@ -175,10 +175,11 @@ List of commands:",
 
   def on_start_record_edit(script) do
     {action, text} =
-      unless is_nil(script.data.previous) do
-        {"change", "\n\nCurrent field value:\n#{script.data.previous}"}
-      else
-        {"add", ""}
+      case script.data.previous do
+        nil ->
+          {"add", ""}
+        _ ->
+          {"change", "\n\nCurrent field value:\n#{script.data.previous}"}
       end
 
     {

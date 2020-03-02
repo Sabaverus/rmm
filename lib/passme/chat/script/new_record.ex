@@ -22,22 +22,17 @@ defmodule Passme.Chat.Script.NewRecord do
   end
 
   def end_script(script) do
-    script.data
-    |> Map.put(:author, script.parent_user.id)
-    |> Map.put(:chat_id, script.parent_chat.id)
-    |> Passme.Chat.create_chat_record()
-    |> case do
-      {:ok, entry} ->
-        # Add record to chat where script is started
-        ChatServer.add_record_to_chat(
-          script.parent_chat.id,
-          entry,
-          script.parent_user
-        )
+    new_record =
+      script.data
+      |> Map.put(:author, script.parent_user.id)
+      |> Map.put(:chat_id, script.parent_chat.id)
 
-      {:error, _changeset} ->
-        Bot.msg(script.parent_user, "Error while adding new record")
-    end
+    # Add record to chat where script is started
+    ChatServer.add_record_to_chat(
+      script.parent_chat.id,
+      new_record,
+      script.parent_user
+    )
 
     script
   end

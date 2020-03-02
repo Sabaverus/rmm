@@ -2,7 +2,6 @@ defmodule Passme.ChatTest do
   use Passme.DataCase
 
   alias Passme.Chat
-  alias Passme.ChatTest
 
   describe "records" do
     @valid_record %{

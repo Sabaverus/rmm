@@ -19,29 +19,26 @@ defmodule Passme.ScriptNewRecordTest do
   }
 
   describe "New record" do
-
-    test "end_script/1 must add new record and push record to Chat.Server" do
-
-      {:ok, pid} = Passme.Chat.Server.start_link(@chat.id)
-
-      :erlang.trace(pid, true, [:receive])
-
+    test "end_script/1 must push prepared data to Chat.Server.add_record_to_chat/3" do
       {:ok, script} =
         script_new_record()
         |> Script.set_step_result(@record.name)
+
       {:ok, script} =
         script
         |> Script.next_step()
         |> Script.set_step_result(@record.value)
-      script =
-        script
-        |> Script.next_step()
-        |> Script.end_script()
 
-      assert_receive {:trace, ^pid, :receive, {_, {:add_record, record, user}}}
+      script
+      |> Script.next_step()
+      |> Script.end_script()
 
       state = Passme.Chat.Server.get_state(@chat.id)
-      {_, record} = Storage.get_record(Map.get(state, :storage), record.id)
+      storage = State.get_storage(state)
+
+      record =
+        Storage.entries(storage)
+        |> Map.get(0)
 
       refute is_nil(record)
       refute is_nil(record.id)

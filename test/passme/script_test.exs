@@ -1,10 +1,8 @@
 defmodule Passme.ScriptTest do
   use Passme.DataCase
 
-  alias Passme.Chat.State
   alias Passme.Chat.Script
   alias Passme.Chat.Script.Step
-  alias Passme.Chat.Storage
 
   @chat %{
     id: 1

@@ -18,7 +18,6 @@ defmodule Passme.EditRecordTest do
   }
 
   describe "Edit record" do
-
     test "on create must store previous value" do
       {:ok, record} = Chat.create_chat_record(@record)
 
@@ -45,10 +44,10 @@ defmodule Passme.EditRecordTest do
       :erlang.trace(pid, true, [:receive])
 
       {:ok, script} = Script.set_step_result(script, "new name")
-      script =
-        script
-        |> Script.next_step()
-        |> Script.end_script()
+
+      script
+      |> Script.next_step()
+      |> Script.end_script()
 
       assert_receive {:trace, ^pid, :receive, {_, {:update_record, fields}}}
       assert Map.get(fields, :name) == "new name"
@@ -66,7 +65,6 @@ defmodule Passme.EditRecordTest do
 
       assert RecordFieldEdit.get_field_key(script) == :name
     end
-
   end
 
   def script_edit_record(record, key) do

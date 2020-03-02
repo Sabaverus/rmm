@@ -18,7 +18,6 @@ defmodule Passme.Chat.Server do
   def init(chat_id) do
     storage =
       Passme.Chat.chat_records(chat_id)
-      |> IO.inspect()
       |> Passme.Chat.Storage.new()
 
     {:ok, State.new(chat_id, storage), @expiry_idle_timeout}
@@ -128,6 +127,7 @@ defmodule Passme.Chat.Server do
             {:ok, record} ->
               {link, opts} = Passme.Chat.Interface.record_link(record)
               Bot.msg(state.chat_id, "Record #{link} was updated", opts)
+
               Map.put(state.storage.entries, storage_id, record)
 
             {:error, _changeset} ->
@@ -191,33 +191,21 @@ defmodule Passme.Chat.Server do
         ) ::
           {:noreply, State.t(), non_neg_integer()}
   def handle_cast({:add_record, record, user}, state) do
-    case user do
-      %{id: user_id, username: name} ->
-        {text, opts} = Passme.Chat.Interface.record_link(record)
+    storage =
+      record
+      |> Passme.Chat.create_chat_record()
+      |> case do
+        {:ok, entry} ->
+          send_record_added(user, entry, state.chat_id)
+          State.get_storage(state)
+          |> Passme.Chat.Storage.put_record(entry)
 
-        Bot.msg(
-          user_id,
-          "Record\n#{record.name} => #{text}\nwas added ✅",
-          opts
-        )
+        {:error, _changeset} ->
+          Bot.msg(user, "Error while adding new record")
+          State.get_storage(state)
+      end
 
-        if state.chat_id !== user_id do
-          Bot.msg(
-            state.chat_id,
-            "Record\n#{record.name} => #{text}\nwas added by user @#{name}",
-            opts
-          )
-        end
-
-      _ ->
-        nil
-    end
-
-    new_storage =
-      State.get_storage(state)
-      |> Passme.Chat.Storage.put_record(record)
-
-    {:noreply, Map.put(state, :storage, new_storage), @expiry_idle_timeout}
+    {:noreply, Map.put(state, :storage, storage), @expiry_idle_timeout}
   end
 
   @spec handle_cast({:show_record, non_neg_integer(), map()}, State.t()) ::
@@ -362,5 +350,29 @@ defmodule Passme.Chat.Server do
   @spec get_chat_process(integer()) :: pid()
   defp get_chat_process(chat_id) do
     Passme.Chat.Supervisor.get_chat_process(chat_id)
+  end
+
+  defp send_record_added(user, entry, chat_id) do
+
+    if user do
+      %{id: user_id, username: name} = user
+      {text, opts} = Passme.Chat.Interface.record_link(entry)
+
+      Bot.msg(
+        user_id,
+        "Record\n#{entry.name} => #{text}\nwas added ✅",
+        opts
+      )
+
+      if chat_id !== user_id do
+        Bot.msg(
+          chat_id,
+          "Record\n#{entry.name} => #{text}\nwas added by user @#{name}",
+          opts
+        )
+      end
+    end
+
+    :ok
   end
 end
