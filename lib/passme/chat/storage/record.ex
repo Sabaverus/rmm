@@ -12,7 +12,7 @@ defmodule Passme.Chat.Storage.Record do
     field :desc, :string
     field :author, :integer
     field :chat_id, :integer
-    field :archived, :boolean
+    field :archived, :boolean, default: false
 
     timestamps()
   end

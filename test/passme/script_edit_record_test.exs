@@ -39,7 +39,7 @@ defmodule Passme.EditRecordTest do
 
       record =
         @chat.id
-        |> Passme.Chat.Server.get_state()
+        |> Passme.Chat.Server.state()
         |> Passme.Chat.State.get_storage()
         |> Passme.Chat.Storage.entries_list()
         |> List.first()
@@ -56,7 +56,7 @@ defmodule Passme.EditRecordTest do
 
       {_, updated} =
         @chat.id
-        |> Passme.Chat.Server.get_state()
+        |> Passme.Chat.Server.state()
         |> Passme.Chat.State.get_storage()
         |> Passme.Chat.Storage.get_record(record.id)
 

@@ -61,7 +61,7 @@ defmodule Passme.Bot do
 
   def handle({:callback_query, %{data: "new_record"} = data}, _context) do
     Metrica.request(data)
-    Passme.Chat.Server.script_new_record(data.from.id, data)
+    Passme.Chat.Server.script_new_record(data.from.id, data.from, data.message.chat)
   end
 
   def handle(
@@ -85,6 +85,7 @@ defmodule Passme.Bot do
       ) do
     Metrica.request(data)
 
+    # TODO REWORK
     {field, record_id} =
       case command do
         "name_" <> record_id ->
@@ -107,7 +108,14 @@ defmodule Passme.Bot do
     unless is_nil(field) do
       if Passme.Chat.Storage.Record.has_field?(field) do
         id = String.to_integer(record_id)
-        Passme.Chat.Server.script_record_edit(data.from.id, data, field, id)
+
+        Passme.Chat.Server.script_edit_record(
+          data.from.id,
+          id,
+          field,
+          data.from,
+          data.message.chat
+        )
       else
         answer(context, "Record field doesn't exists or not allowed to edit (#{field})")
       end
@@ -122,7 +130,7 @@ defmodule Passme.Bot do
 
     case action do
       "step_clean" ->
-        Passme.Chat.Server.input_handler(data.from.id, nil, data)
+        Passme.Chat.Server.handle_input(data.from.id, nil)
 
       "abort" ->
         Passme.Chat.Server.script_abort(data.from.id)
@@ -136,7 +144,7 @@ defmodule Passme.Bot do
 
   def handle({:text, text, data}, _context) do
     Metrica.request(data)
-    Passme.Chat.Server.input_handler(data.chat.id, text, data)
+    Passme.Chat.Server.handle_input(data.chat.id, text)
   end
 
   def handle({:command, "start", data}, context) do
@@ -147,7 +155,7 @@ defmodule Passme.Bot do
 
   def handle({:command, "r_" <> record_id, data}, _context) do
     Metrica.request(data)
-    Passme.Chat.Server.show_record(data.chat.id, String.to_integer(record_id), data)
+    Passme.Chat.Server.print_record(data.chat.id, String.to_integer(record_id))
   end
 
   def handle({:command, cmd, data}, _context) do

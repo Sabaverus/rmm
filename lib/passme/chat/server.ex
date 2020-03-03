@@ -38,9 +38,9 @@ defmodule Passme.Chat.Server do
 
   ########### Client ###########
 
-  def get_state(chat_id) do
+  def state(chat_id) do
     get_chat_process(chat_id)
-    |> GenServer.call(:get_state)
+    |> GenServer.call(:state)
   end
 
   def print_list(chat_id) do
@@ -53,21 +53,41 @@ defmodule Passme.Chat.Server do
     |> GenServer.cast({:command, command, data})
   end
 
+  @doc """
+  Send to telegram chat detailed record by given id
+  """
+  def print_record(chat_id, id) do
+    get_chat_process(chat_id)
+    |> GenServer.cast({:action, {:record, id}})
+  end
+
+  @doc """
+  Process given input
+  """
+  def handle_input(chat_id, text) do
+    get_chat_process(chat_id)
+    |> GenServer.cast({:action, {:input, text}})
+  end
+
   ## Scripts actions ##
 
-  def input_handler(chat_id, text, context) do
+  @doc """
+  Request for start script `Chat.Script.NewRecord` in user-caller process
+  """
+  @spec script_new_record(integer(), map(), map()) :: :ok
+  def script_new_record(chat_id, user, chat) do
     get_chat_process(chat_id)
-    |> GenServer.cast({:input, text, context})
+    |> GenServer.cast({:script, {:new_record, user, chat}})
   end
 
-  def script_new_record(chat_id, context) do
+  @doc """
+  Request for start script `Chat.Script.RecordFieldEdit` in user-caller process\n
+  Checks given Record id for avaliablity for given chat and user must be related
+  """
+  @spec script_edit_record(integer(), non_neg_integer(), atom(), map(), map()) :: :ok
+  def script_edit_record(chat_id, id, field, user, chat) do
     get_chat_process(chat_id)
-    |> GenServer.cast({:new_record, context})
-  end
-
-  def script_record_edit(chat_id, context, type, record_id) do
-    get_chat_process(chat_id)
-    |> GenServer.cast({:record_edit, type, record_id, context})
+    |> GenServer.cast({:script, {:edit_record, id, field, user, chat}})
   end
 
   def script_record_action(chat_id, context, type, record_id) do
@@ -82,24 +102,29 @@ defmodule Passme.Chat.Server do
 
   ## Records actions ##
 
-  def show_record(chat_id, rec_id, context) do
-    get_chat_process(chat_id)
-    |> GenServer.cast({:show_record, rec_id, context})
-  end
+  # get_record
 
+  # create_record
   def add_record_to_chat(chat_id, record, user \\ nil) do
     get_chat_process(chat_id)
     |> GenServer.cast({:add_record, record, user})
+
+    # |> GenServer.cast({:record, {:create, fields, user}})
   end
 
+  # update_record(chat_id, record_id, fields)
   def update_chat_record(chat_id, record_id, fields) do
     get_chat_process(chat_id)
     |> GenServer.cast({:update_record, record_id, fields})
+
+    # |> GenServer.cast({:record, {:update, id, fields}})
   end
 
   def archive_record(chat_id, storage_id) do
     get_chat_process(chat_id)
     |> GenServer.cast({:archive_record, storage_id})
+
+    # |> GenServer.cast({:record, {:archive, id}})
   end
 
   ########### Server ###########
@@ -112,8 +137,26 @@ defmodule Passme.Chat.Server do
     {:reply, :ok, State.script_abort(state), @expiry_idle_timeout}
   end
 
-  def handle_call(:get_state, _from, state) do
+  def handle_call(:state, _from, state) do
     {:reply, state, state, @expiry_idle_timeout}
+  end
+
+  # Print record to chat
+  @spec handle_cast({:action, {:record, non_neg_integer()}}, State.t()) ::
+          {:noreply, State.t(), non_neg_integer()}
+  def handle_cast({:action, {:record, id}}, state) do
+    spawn(fn ->
+      case Passme.Chat.chat_record_not_archived(id, state.chat_id) do
+        %Record{} = record ->
+          {text, opts} = Passme.Chat.Interface.record(record)
+          Bot.msg(state.chat_id, text, opts)
+
+        _ ->
+          Bot.msg(state.chat_id, "Message not found")
+      end
+    end)
+
+    {:noreply, state, @expiry_idle_timeout}
   end
 
   def handle_cast({:update_record, record_id, fields}, state) do
@@ -177,7 +220,7 @@ defmodule Passme.Chat.Server do
     {:noreply, Map.put(state, :storage, new_storage), @expiry_idle_timeout}
   end
 
-  def handle_cast({:new_record, context}, state) do
+  def handle_cast({:script, {:new_record, user, chat}}, state) do
     {
       :noreply,
       Map.put(
@@ -185,8 +228,8 @@ defmodule Passme.Chat.Server do
         :script,
         Script.start_script(
           Passme.Chat.Script.NewRecord,
-          context.from,
-          context.message.chat,
+          user,
+          chat,
           %Record{}
         )
       ),
@@ -200,6 +243,13 @@ defmodule Passme.Chat.Server do
         ) ::
           {:noreply, State.t(), non_neg_integer()}
   def handle_cast({:add_record, record, user}, state) do
+    record =
+      case user do
+        nil -> record
+        _ -> Map.put(record, :author, user.id)
+      end
+      |> Map.put(:chat_id, state.chat_id)
+
     storage =
       record
       |> Passme.Chat.create_chat_record()
@@ -218,57 +268,35 @@ defmodule Passme.Chat.Server do
     {:noreply, Map.put(state, :storage, storage), @expiry_idle_timeout}
   end
 
-  @spec handle_cast({:show_record, non_neg_integer(), map()}, State.t()) ::
-          {:noreply, State.t(), non_neg_integer()}
-  def handle_cast({:show_record, record_id, _context}, state) do
-    spawn(fn ->
-      case Passme.Chat.chat_record_not_archived(record_id, state.chat_id) do
-        %Record{} = record ->
-          {text, opts} = Passme.Chat.Interface.record(record)
-          Bot.msg(state.chat_id, text, opts)
-
-        _ ->
-          Bot.msg(state.chat_id, "Message not found")
-      end
-    end)
-
-    {:noreply, state, @expiry_idle_timeout}
-  end
-
-  def handle_cast({:record_edit, _, _, _}, %{script: script} = state)
+  def handle_cast({:script, {:edit_record, _, _, _, _}}, %{script: script} = state)
       when not is_nil(script) do
-    Bot.msg(state.chat_id, "Error: currently working another script")
+    Bot.msg(state.chat_id, "Currently working another script")
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  @spec handle_cast({:record_edit, atom(), non_neg_integer(), map()}, State.t()) ::
-          {:noreply, State.t(), non_neg_integer()}
-  def handle_cast({:record_edit, key, record_id, context}, state) do
-    pu = context.from
-    pc = context.message.chat
-
+  def handle_cast({:script, {:edit_record, record_id, field, user, chat}}, state) do
     script =
-      Passme.Chat.chat_record_not_archived(pc.id, record_id)
+      Passme.Chat.chat_record_not_archived(record_id, chat.id)
       |> case do
         nil ->
-          Bot.msg(pc.id, "Record doesn't exists")
+          Bot.msg(chat.id, "Record doesn't exists")
           nil
 
         record ->
-          with true <- Record.has_field?(key),
-               true <- State.user_in_chat?(record.chat_id, pu.id) do
+          with true <- Record.has_field?(field),
+               true <- State.user_in_chat?(record.chat_id, user.id) do
             # Check here user can edit this record
 
             Script.start_script(
               RecordFieldEdit,
-              pu,
-              pc,
-              RecordFieldEdit.initial_data(record, key)
+              user,
+              chat,
+              RecordFieldEdit.initial_data(record, field)
             )
           else
             _ ->
               Bot.msg(state.chat_id, "Not allowed to edit this record")
-              |> Bot.private_chat_requested(pc.id, pu)
+              |> Bot.private_chat_requested(chat.id, user)
 
               nil
           end
@@ -278,22 +306,23 @@ defmodule Passme.Chat.Server do
   end
 
   def handle_cast({:record_action, {:delete, record_id}, context}, state) do
-    pu = context.from
-    pc = context.message.chat
+    user = context.from
+    chat = context.message.chat
 
-    Passme.Chat.chat_record_not_archived(record_id, pc.id)
+    Passme.Chat.chat_record_not_archived(record_id, chat.id)
     |> case do
       nil ->
-        Bot.msg(pc.id, "Record doesn't exists")
+        Bot.msg(chat.id, "Record doesn't exists")
 
       record ->
-        with chat_state <- Passme.Chat.Server.get_state(record.chat_id),
-             true <- State.user_in_chat?(chat_state, pu.id),
+        # Check here user can edit this record
+        with chat_state <- state(record.chat_id),
+             true <- State.user_in_chat?(chat_state, user.id),
              {_, record} <-
-               Passme.Chat.Storage.get_record(State.get_storage(chat_state), record_id) do
-          # Check here user can edit this record
-
-          Passme.Chat.Server.archive_record(record.chat_id, record.id)
+               chat_state
+               |> State.get_storage()
+               |> Storage.get_record(record_id) do
+          archive_record(record.chat_id, record.id)
         else
           _ -> Bot.msg(state.chat_id, "Not allowed to delete this record")
         end
@@ -302,7 +331,7 @@ defmodule Passme.Chat.Server do
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:record_action, _, _}, state) do
+  def handle_cast({:record_action, _action, _context}, state) do
     Bot.msg(state.chat_id, "Action is not defined")
     {:noreply, state, @expiry_idle_timeout}
   end
@@ -319,11 +348,11 @@ defmodule Passme.Chat.Server do
   end
 
   # Enter if awaiter (script) is not null
-  def handle_cast({:input, _, _}, %{script: nil} = state) do
+  def handle_cast({:action, {:input, _}}, %{script: nil} = state) do
     {:noreply, state}
   end
 
-  def handle_cast({:input, text, _context}, %{script: script} = state) do
+  def handle_cast({:action, {:input, text}}, %{script: script} = state) do
     new_state =
       case Script.set_step_result(script, text) do
         {:ok, script} ->
@@ -346,11 +375,7 @@ defmodule Passme.Chat.Server do
           state
       end
 
-    {
-      :noreply,
-      new_state,
-      @expiry_idle_timeout
-    }
+    {:noreply, new_state, @expiry_idle_timeout}
   end
 
   def handle_info(:timeout, state) do

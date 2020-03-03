@@ -22,15 +22,10 @@ defmodule Passme.Chat.Script.NewRecord do
   end
 
   def end_script(script) do
-    new_record =
-      script.data
-      |> Map.put(:author, script.parent_user.id)
-      |> Map.put(:chat_id, script.parent_chat.id)
-
     # Add record to chat where script is started
     ChatServer.add_record_to_chat(
       script.parent_chat.id,
-      new_record,
+      script.data,
       script.parent_user
     )
 

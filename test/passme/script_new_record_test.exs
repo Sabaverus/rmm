@@ -33,7 +33,7 @@ defmodule Passme.ScriptNewRecordTest do
       |> Script.next_step()
       |> Script.end_script()
 
-      state = Passme.Chat.Server.get_state(@chat.id)
+      state = Passme.Chat.Server.state(@chat.id)
       storage = State.get_storage(state)
 
       assert Storage.entries(storage)
