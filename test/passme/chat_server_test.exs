@@ -2,8 +2,8 @@ defmodule Passme.Chat.Server.Test do
   use Passme.DataCase
 
   alias Passme.Chat.Server
-  alias Passme.Chat.Script
   alias Passme.Chat.Storage
+  alias Passme.Chat.Storage.Record
   alias Passme.Chat.Script.RecordFieldEdit
 
   @chat %{
@@ -37,7 +37,58 @@ defmodule Passme.Chat.Server.Test do
     end
 
     test "create_record/3 creates record and stores them in chat storage" do
-      refute is_nil(create_record(@chat.id))
+      record = create_record(@chat.id)
+      refute is_nil(record)
+      assert record.chat_id == @chat.id
+    end
+
+    test "update_record/3 updates record by id with given fields" do
+      chat_id = 99919
+      record = create_record(chat_id)
+
+      Server.update_record(chat_id, record.id, %{
+        desc: "record description",
+        value: "test string"
+      })
+
+      # Wait for Server message execution
+      _state = Server.state(chat_id)
+
+      updated = Passme.Chat.record(record.id)
+      refute is_nil(updated)
+
+      assert updated.value == "test string"
+      assert updated.desc == "record description"
+      assert record.name == updated.name
+    end
+
+    test "update_record/3 will not update record if record not found in chat" do
+
+      chat_id = 29919
+      another_chat = 2222222
+      record = create_record(chat_id)
+
+      Server.update_record(another_chat, record.id, %{
+        name: "something"
+      })
+
+      # Wait for Server message execution
+      _state = Server.state(chat_id)
+
+      not_updated = Passme.Chat.record(record.id)
+      assert record.name == not_updated.name
+    end
+
+    test "archive_record/2 must archive record related to chat state" do
+      chat_id = 3123123
+      record = create_record(chat_id)
+
+      Server.archive_record(chat_id, record.id)
+
+      # Wait for Server message execution
+      _state = Server.state(chat_id)
+
+      assert true == Passme.Chat.record(record.id) |> Record.archived?
     end
   end
 
@@ -52,7 +103,7 @@ defmodule Passme.Chat.Server.Test do
   end
 
   def create_record(chat_id) do
-    Server.add_record_to_chat(chat_id, @record)
+    Server.create_record(chat_id, @record)
 
     %{storage: storage} = Server.state(chat_id)
 

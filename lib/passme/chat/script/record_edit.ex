@@ -34,7 +34,7 @@ defmodule Passme.Chat.Script.RecordFieldEdit do
   end
 
   def end_script(script) do
-    ChatServer.update_chat_record(script.parent_chat.id, script.data.record_id, script.data)
+    ChatServer.update_record(script.parent_chat.id, script.data.record_id, script.data)
     script
   end
 

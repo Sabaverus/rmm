@@ -38,6 +38,9 @@ defmodule Passme.Chat.Server do
 
   ########### Client ###########
 
+  @doc """
+  Synchronously requested chat state
+  """
   def state(chat_id) do
     get_chat_process(chat_id)
     |> GenServer.call(:state)
@@ -104,27 +107,37 @@ defmodule Passme.Chat.Server do
 
   # get_record
 
-  # create_record
-  def add_record_to_chat(chat_id, record, user \\ nil) do
-    get_chat_process(chat_id)
-    |> GenServer.cast({:add_record, record, user})
+  @doc """
+  Accepts `%Record{}` or map with Record fields.
 
-    # |> GenServer.cast({:record, {:create, fields, user}})
+  Creating new record in database with linking to chat process and user.
+
+  User can be nil and Record would be linked only to chat
+  """
+  @spec create_record(integer(), map(), map() | nil) :: :ok
+  def create_record(chat_id, fields, user \\ nil) do
+    get_chat_process(chat_id)
+    |> GenServer.cast({:record, {:create, fields, user}})
   end
 
-  # update_record(chat_id, record_id, fields)
-  def update_chat_record(chat_id, record_id, fields) do
+  @doc """
+  Checking given Record `id` for avaliablity in chat and updating them if found with given fields
+  """
+  @spec update_record(integer(), non_neg_integer(), map()) :: :ok
+  def update_record(chat_id, id, fields) do
     get_chat_process(chat_id)
-    |> GenServer.cast({:update_record, record_id, fields})
-
-    # |> GenServer.cast({:record, {:update, id, fields}})
+    |> GenServer.cast({:record, {:update, id, fields}})
   end
 
-  def archive_record(chat_id, storage_id) do
-    get_chat_process(chat_id)
-    |> GenServer.cast({:archive_record, storage_id})
+  @doc """
+  Push record by id into "archive"
 
-    # |> GenServer.cast({:record, {:archive, id}})
+  Record must be related to chat process, also ignored
+  """
+  @spec archive_record(integer(), non_neg_integer()) :: :ok
+  def archive_record(chat_id, id) do
+    get_chat_process(chat_id)
+    |> GenServer.cast({:record, {:archive, id}})
   end
 
   ########### Server ###########
@@ -159,11 +172,11 @@ defmodule Passme.Chat.Server do
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:update_record, record_id, fields}, state) do
+  def handle_cast({:record, {:update, id, fields}}, state) do
     storage =
       state
       |> State.get_storage()
-      |> Storage.get_record(record_id)
+      |> Storage.get_record(id)
       |> case do
         {entry_id, record} ->
           record
@@ -192,12 +205,12 @@ defmodule Passme.Chat.Server do
     {:noreply, state, @expiry_idle_timeout}
   end
 
-  def handle_cast({:archive_record, record_id}, state) do
+  def handle_cast({:record, {:archive, id}}, state) do
     storage = State.get_storage(state)
 
     {storage_id, entry} =
       storage
-      |> Storage.get_record(record_id)
+      |> Storage.get_record(id)
 
     new_storage =
       if entry do
@@ -205,7 +218,7 @@ defmodule Passme.Chat.Server do
           {:ok, entry} ->
             # Because user can't delete entry, only set flag "archived"
             Bot.msg(state.chat_id, "Record deleted")
-            Passme.Chat.Storage.update(storage, storage_id, entry)
+            Storage.update(storage, storage_id, entry)
 
           {:error, changeset} ->
             Bot.msg(state.chat_id, "Error on deleting record")
@@ -238,11 +251,10 @@ defmodule Passme.Chat.Server do
   end
 
   @spec handle_cast(
-          {:add_record, Record.t(), map() | nil},
+          {:record, {:create, Record.t(), map() | nil}},
           State.t()
-        ) ::
-          {:noreply, State.t(), non_neg_integer()}
-  def handle_cast({:add_record, record, user}, state) do
+        ) :: {:noreply, State.t(), non_neg_integer()}
+  def handle_cast({:record, {:create, record, user}}, state) do
     record =
       case user do
         nil -> record

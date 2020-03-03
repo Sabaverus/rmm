@@ -35,7 +35,7 @@ defmodule Passme.EditRecordTest do
     end
 
     test "end_script/1 must send request to chat server where is record updated" do
-      Passme.Chat.Server.add_record_to_chat(@chat.id, @record)
+      Passme.Chat.Server.create_record(@chat.id, @record)
 
       record =
         @chat.id

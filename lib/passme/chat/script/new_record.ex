@@ -23,7 +23,7 @@ defmodule Passme.Chat.Script.NewRecord do
 
   def end_script(script) do
     # Add record to chat where script is started
-    ChatServer.add_record_to_chat(
+    ChatServer.create_record(
       script.parent_chat.id,
       script.data,
       script.parent_user
