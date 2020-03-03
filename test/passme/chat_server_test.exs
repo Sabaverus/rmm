@@ -1,6 +1,7 @@
 defmodule Passme.Chat.Server.Test do
   use Passme.DataCase
 
+  alias Passme.Chat.State
   alias Passme.Chat.Server
   alias Passme.Chat.Storage
   alias Passme.Chat.Storage.Record
@@ -63,9 +64,8 @@ defmodule Passme.Chat.Server.Test do
     end
 
     test "update_record/3 will not update record if record not found in chat" do
-
       chat_id = 29919
-      another_chat = 2222222
+      another_chat = 2_222_222
       record = create_record(chat_id)
 
       Server.update_record(another_chat, record.id, %{
@@ -79,16 +79,24 @@ defmodule Passme.Chat.Server.Test do
       assert record.name == not_updated.name
     end
 
-    test "archive_record/2 must archive record related to chat state" do
-      chat_id = 3123123
+    test "archive_record/2 must archive record related to chat state and update storage" do
+      chat_id = 3_123_123
       record = create_record(chat_id)
 
       Server.archive_record(chat_id, record.id)
 
       # Wait for Server message execution
-      _state = Server.state(chat_id)
+      state = Server.state(chat_id)
 
-      assert true == Passme.Chat.record(record.id) |> Record.archived?
+      {_, storage_entry} =
+        state
+        |> State.get_storage()
+        |> Storage.get_record(record.id)
+
+      archived = Passme.Chat.record(record.id)
+      assert true == Record.archived?(storage_entry)
+      assert true == Record.archived?(archived)
+      assert archived.id == storage_entry.id
     end
   end
 
