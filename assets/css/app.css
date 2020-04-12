@@ -1,3 +1,41 @@
 /* This file is for your main application css. */
 
-@import "./phoenix.css";
+/* @import "./phoenix.css"; */
+html {
+    font-family: 'Roboto', sans-serif;
+}
+body {
+    margin: 0;
+}
+
+header {
+    padding: 8px 0 8px 0;
+    background-color: rgba(128, 128, 128, 0.2);
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    min-width: 320px;
+    margin: auto;
+}
+
+.logo {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    color: initial;
+}
+
+.navigation ul {
+    list-style: none;
+}
+
+.navigation a {
+    color: initial;
+}
