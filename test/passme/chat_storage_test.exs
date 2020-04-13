@@ -27,7 +27,7 @@ defmodule Passme.ChatStorageTest do
   }
 
   @records [@record_1, @record_2, @record_3]
-  @with_incorrect_record [@record_1, @record_4]
+  # @with_incorrect_record [@record_1, @record_4]
 
   describe "Chat.Storage" do
     test "new/1 return new Storage struct with given records in entries" do

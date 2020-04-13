@@ -382,8 +382,8 @@ defmodule Passme.Chat.Server do
             Map.put(state, :script, script)
           end
 
-        {:error, message} ->
-          Bot.msg(state.chat_id, message)
+        {:error, message, value} ->
+          Bot.msg(state.chat_id, message <> "\nYour value is: #{value}")
           state
       end
 

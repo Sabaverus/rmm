@@ -4,7 +4,7 @@ defmodule Passme.Chat.Script.Base do
   defmacro __using__(ops) do
     import Logger
 
-    alias Passme.Chat.Interface, as: ChatInterface
+    alias Passme.Chat.Script.Interface
     alias Passme.Chat.Script.Step
     alias Passme.Bot
 
@@ -56,19 +56,46 @@ defmodule Passme.Chat.Script.Base do
         script
       end
 
+      # TODO: make function possible to accept all input types
       def set_step_result(%{step: {_, step}} = script, value) do
-        case validate_value(step, value) do
-          :ok ->
-            {
-              :ok,
-              script
-              |> Map.put(:timer, reset_input_timer(script.timer))
-              |> Map.put(:data, Map.put(script.data, get_field_key(script), escape(value)))
-            }
 
-          {:error, msg} ->
-            {:error, msg}
+        with {:ok, sanitized} <- sanitaze(value),
+             {:ok, normalized} <- type_cast(step, sanitized),
+             :ok <- validate_value(step, normalized) do
+          {
+            :ok,
+            script
+            |> Map.put(:timer, reset_input_timer(script.timer))
+            |> Map.put(:data, Map.put(script.data, get_field_key(script), normalized))
+          }
+        else
+          {:error, msg, value} -> {:error, msg, value}
         end
+      end
+
+      defp sanitaze(value) do
+        {:ok, escape(value)}
+      end
+
+      defp type_cast(step, value) do
+        case step.type do
+          :boolean -> type_cast_boolean(value)
+          :string  -> {:ok, value}
+          _ -> {:error, "Undefined type", value}
+        end
+      end
+
+      defp type_cast_boolean(value) do
+        result =
+          case value do
+            0 -> {:ok, false}
+            1 -> {:ok, true}
+            "0" -> {:ok, false}
+            "1" -> {:ok, true}
+            "y" -> {:ok, true}
+            "n" -> {:ok, false}
+            _ -> {:error, "Possible values can be `y` / `n` or `0` / `1`", value}
+          end
       end
 
       def start_step(%__MODULE__{step: :end} = script), do: finish(script)
@@ -79,7 +106,7 @@ defmodule Passme.Chat.Script.Base do
         can_be_empty = get_step_key_value(step, :can_be_empty, get_field_key(script))
         # If user tried to start script from group-chat, bot doesn't added to private chat
         # telegram returns error 403 "Not in conversation"
-        case Bot.msg(script.parent_user, ChatInterface.script_step(step, can_be_empty)) do
+        case Bot.msg(script.parent_user, Interface.step(step, can_be_empty)) do
           {:ok, reply_data} ->
             script
             |> Map.put(:timer, reset_input_timer(script.timer))
@@ -110,6 +137,7 @@ defmodule Passme.Chat.Script.Base do
       def end?(%__MODULE__{step: {:end, _}}), do: true
       def end?(%__MODULE__{step: _}), do: false
 
+      # TODO: move history of messages to another module
       def cleanup(script) do
         spawn(fn ->
           Enum.each(script.messages, fn msg_id ->

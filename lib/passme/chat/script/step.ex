@@ -3,19 +3,23 @@ defmodule Passme.Chat.Script.Step do
   Script step structure
   """
   @type t :: %__MODULE__{
-          text: binary(),
+          message: binary() | Map.t(),
           next: atom(),
           validate: fun(any()) | nil,
           can_be_empty: fun(Passme.Chat.Script.t()) | boolean(),
           field: atom() | nil
         }
 
-  defstruct text: nil, next: nil, validate: nil, can_be_empty: false, field: nil
+  defstruct message: nil,
+            next: nil,
+            validate: nil,
+            can_be_empty: false,
+            field: nil,
+            type: :string
 
-  @spec new(binary(), atom(), Keyword.t()) :: __MODULE__
-  def new(text, next, opts \\ []) do
+  def new(message, next, opts \\ []) do
     %__MODULE__{
-      text: text,
+      message: message,
       next: next
     }
     |> Map.merge(Enum.into(opts, %{}))

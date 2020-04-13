@@ -123,18 +123,12 @@ defmodule Passme.Bot do
   end
 
   def handle(
-        {:callback_query, %{data: "script_" <> action} = data},
+        {:callback_query, %{data: "script_" <> _action} = data},
         _context
       ) do
     Metrica.request(data)
 
-    case action do
-      "step_clean" ->
-        Passme.Chat.Server.handle_input(data.from.id, nil)
-
-      "abort" ->
-        Passme.Chat.Server.script_abort(data.from.id)
-    end
+    Passme.Chat.Script.Commands.route(data)
   end
 
   def handle({:callback_query, data}, context) do

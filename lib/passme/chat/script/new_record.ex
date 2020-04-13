@@ -2,13 +2,23 @@ defmodule Passme.Chat.Script.NewRecord do
   @moduledoc false
 
   alias Passme.Chat.Script.Step
+  alias Passme.Chat.Script.Interface
   alias Passme.Chat.Server, as: ChatServer
   alias Passme.Bot
 
   use Passme.Chat.Script.Base,
     steps: [
       {:name, Step.new("Enter record name", :value)},
-      {:value, Step.new("Enter record value", :end)}
+      {:value, Step.new("Enter record value", :privacy)},
+      {
+        :privacy,
+        Step.new(
+          Interface.yes_no("This record is private?"),
+          :end,
+          field: :private,
+          type: :boolean
+        )
+      }
     ]
 
   def on_start(script) do

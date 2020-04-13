@@ -12,6 +12,7 @@ defmodule Passme.Chat.Storage.Record do
     field :desc, :string
     field :author, :integer
     field :chat_id, :integer
+    field :private, :boolean, default: false
     field :archived, :boolean, default: false
 
     timestamps()
@@ -27,6 +28,7 @@ defmodule Passme.Chat.Storage.Record do
       :value,
       :author,
       :chat_id,
+      :private,
       :archived
     ])
     |> validate_required(required_fields())
