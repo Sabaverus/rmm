@@ -70,13 +70,19 @@ defmodule Passme.Bot do
       ) do
     Metrica.request(data)
 
-    {type, record_id} =
-      case action do
-        "delete_" <> record_id -> {:delete, String.to_integer(record_id)}
-        _ -> {:error, "Undefined action"}
-      end
+    case action do
+      "getperm_" <> record_id -> {:getperm, record_id}
+      "delete_" <> record_id -> {:delete, record_id}
+      "allow_" <> perm_id -> {:allow, perm_id}
+      _ -> {:error, "Undefined action"}
+    end
+    |> case do
+      {:error, msg} ->
+        msg(data.from.id, msg)
 
-    Passme.Chat.Server.script_record_action(data.from.id, data, type, record_id)
+      {type, id} ->
+        Passme.Chat.Server.script_record_action(data.from.id, data, type, String.to_integer(id))
+    end
   end
 
   def handle(
@@ -149,7 +155,10 @@ defmodule Passme.Bot do
 
   def handle({:command, "r_" <> record_id, data}, _context) do
     Metrica.request(data)
-    Passme.Chat.Server.print_record(data.chat.id, String.to_integer(record_id))
+
+    id = String.to_integer(record_id)
+
+    Passme.Chat.Server.print_record(data.chat.id, id)
   end
 
   def handle({:command, cmd, data}, _context) do

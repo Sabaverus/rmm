@@ -1,5 +1,5 @@
 defmodule Passme.Chat.Script.Interface do
-  @doc false
+  @moduledoc false
 
   alias Passme.Chat.Script.Step
   alias Passme.Chat.Script.Commands

@@ -11,6 +11,8 @@ defmodule Passme.Chat.Server do
   alias Passme.Chat.Storage.Record
   alias Passme.Chat.Script
   alias Passme.Chat.State
+  alias Passme.Chat.Permissions
+  alias Passme.Chat.Permissions.Request
   alias Passme.Bot
 
   @expiry_idle_timeout :timer.seconds(60)
@@ -158,16 +160,20 @@ defmodule Passme.Chat.Server do
   @spec handle_cast({:action, {:record, non_neg_integer()}}, State.t()) ::
           {:noreply, State.t(), non_neg_integer()}
   def handle_cast({:action, {:record, id}}, state) do
-    spawn(fn ->
-      case Passme.Chat.chat_record_not_archived(id, state.chat_id) do
-        %Record{} = record ->
+    case Passme.Chat.chat_record_not_archived(id, state.chat_id) do
+      %Record{} = record ->
+        # Проверка на доступность
+        if record.private do
+          {text, opts} = Passme.Chat.Interface.record_private(record)
+          Bot.msg(state.chat_id, text, opts)
+        else
           {text, opts} = Passme.Chat.Interface.record(record)
           Bot.msg(state.chat_id, text, opts)
+        end
 
-        _ ->
-          Bot.msg(state.chat_id, "Message not found")
-      end
-    end)
+      _ ->
+        Bot.msg(state.chat_id, "Record not found")
+    end
 
     {:noreply, state, @expiry_idle_timeout}
   end
@@ -338,6 +344,71 @@ defmodule Passme.Chat.Server do
         else
           _ -> Bot.msg(state.chat_id, "Not allowed to delete this record")
         end
+    end
+
+    {:noreply, state, @expiry_idle_timeout}
+  end
+
+  def handle_cast({:record_action, {:getperm, record_id}, context}, state) do
+    user = context.from
+
+    record = Passme.Chat.record(record_id)
+    author_id = record.author
+
+    if record do
+      spawn(fn ->
+        case Passme.Chat.Permissions.record_permission(record, user.id) do
+          :allowed ->
+            {text, opts} = Passme.Chat.Interface.record(record)
+            Bot.msg(user.id, text, opts)
+
+          :pending ->
+            {text, opts} = Passme.Chat.Interface.record_perm_pending()
+            Bot.msg(user.id, text, opts)
+
+          :private ->
+            {:ok, %{id: perm_id}} = Passme.Chat.Permissions.request_permission(record, user.id)
+            {text, opts} = Passme.Chat.Interface.record_getperm_request(user, record, perm_id)
+            Bot.msg(author_id, text, opts)
+        end
+      end)
+    else
+      Bot.msg(user.id, "Record not found")
+    end
+
+    {:noreply, state, @expiry_idle_timeout}
+  end
+
+  def handle_cast({:record_action, {:allow, permission_id}, context}, state) do
+    user = context.from
+
+    request = Permissions.request(permission_id)
+
+    case request do
+      nil ->
+        Bot.msg(user.id, "Undefined action")
+
+      %Request{end_time: nil} ->
+        record = Passme.Chat.record(request.record_id)
+
+        Request.update(request, %{
+          end_time: DateTime.utc_now()
+        })
+
+        # Check ^ is success and sent 3 messages.
+        # To author - record is permitted
+        {text, opts} = Passme.Chat.Interface.record_permitted_admin()
+        Bot.msg(user.id, text, opts)
+
+        # To user - record is permitted
+        {text, opts} = Passme.Chat.Interface.record_permitted_requisting(request.user_id, record)
+        Bot.msg(request.user_id, text, opts)
+
+        # To user - record in detail
+        print_record(request.user_id, record.id)
+
+      %Request{} ->
+        Bot.msg(user.id, "Permission is not valid")
     end
 
     {:noreply, state, @expiry_idle_timeout}

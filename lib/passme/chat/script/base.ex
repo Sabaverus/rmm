@@ -58,7 +58,6 @@ defmodule Passme.Chat.Script.Base do
 
       # TODO: make function possible to accept all input types
       def set_step_result(%{step: {_, step}} = script, value) do
-
         with {:ok, sanitized} <- sanitaze(value),
              {:ok, normalized} <- type_cast(step, sanitized),
              :ok <- validate_value(step, normalized) do
@@ -80,7 +79,7 @@ defmodule Passme.Chat.Script.Base do
       defp type_cast(step, value) do
         case step.type do
           :boolean -> type_cast_boolean(value)
-          :string  -> {:ok, value}
+          :string -> {:ok, value}
           _ -> {:error, "Undefined type", value}
         end
       end

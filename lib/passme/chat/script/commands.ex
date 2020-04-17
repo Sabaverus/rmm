@@ -1,5 +1,5 @@
 defmodule Passme.Chat.Script.Commands do
-  @doc false
+  @moduledoc false
 
   def get(cmd) when is_atom(cmd) do
     case cmd do

@@ -27,6 +27,10 @@ defmodule Passme.Chat do
     DB.get(Record, record_id)
   end
 
+  def user_chat_records(chat_id, user_id) do
+    get_chat_records_for_user(user_id, chat_id)
+  end
+
   def get_chat_records_for_user(user_id, chat_id) do
     Record
     |> Record.user(user_id)

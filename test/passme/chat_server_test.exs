@@ -14,7 +14,7 @@ defmodule Passme.Chat.Server.Test do
     id: 1000
   }
   @chat_edit %{
-    id: 10001
+    id: 10_001
   }
 
   @user %{
@@ -44,7 +44,7 @@ defmodule Passme.Chat.Server.Test do
     end
 
     test "update_record/3 updates record by id with given fields" do
-      chat_id = 99919
+      chat_id = 99_919
       record = create_record(chat_id)
 
       Server.update_record(chat_id, record.id, %{
@@ -64,7 +64,7 @@ defmodule Passme.Chat.Server.Test do
     end
 
     test "update_record/3 will not update record if record not found in chat" do
-      chat_id = 29919
+      chat_id = 29_919
       another_chat = 2_222_222
       record = create_record(chat_id)
 
